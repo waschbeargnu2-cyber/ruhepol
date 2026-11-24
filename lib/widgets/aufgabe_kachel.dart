@@ -62,6 +62,7 @@ class AufgabeKachel extends StatelessWidget {
         ),
       if (aufgabe.wiederholung != null) const _Info(icon: Icons.repeat),
       if (aufgabe.notiz.isNotEmpty) const _Info(icon: Icons.notes),
+      if (aufgabe.kalenderEventId != null) const _Info(icon: Icons.event_available),
     ];
 
     return Dismissible(

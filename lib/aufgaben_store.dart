@@ -25,6 +25,20 @@ class AufgabenStore extends ChangeNotifier {
   Pastell farbe = Pastell.salbei;
   ThemeMode themeMode = ThemeMode.system;
 
+  // Google Kalender
+  /// Wurde Google schon einmal verbunden? Dann beim Start still neu verbinden.
+  bool googleAktiv = false;
+
+  /// ID des eigenen Kalenders „Ruhepol“ bei Google.
+  String? kalenderId;
+
+  /// Kalendereinträge gelöschter Aufgaben, die noch bei Google zu entfernen sind.
+  List<String> zuLoeschendeTermine = [];
+
+  /// Zuletzt geladene Google-Termine (auch offline sichtbar).
+  List<Termin> termine = [];
+  DateTime? termineStand;
+
   String? _rueckgaengigStand;
   Timer? _speicherTimer;
   Future<void> _letzteSpeicherung = Future.value();
@@ -44,15 +58,36 @@ class AufgabenStore extends ChangeNotifier {
 
   Map<String, dynamic> _alsJson() => {
         'version': 1,
-        'einstellungen': {'farbe': farbe.name, 'themeMode': themeMode.name},
+        'einstellungen': {
+          'farbe': farbe.name,
+          'themeMode': themeMode.name,
+          'googleAktiv': googleAktiv,
+        },
         'listen': [for (final l in listen) l.toJson()],
         'aufgaben': [for (final a in aufgaben) a.toJson()],
+        'kalender': {
+          'id': kalenderId,
+          'zuLoeschen': zuLoeschendeTermine,
+          'termine': [for (final t in termine) t.toJson()],
+          'stand': termineStand?.toIso8601String(),
+        },
       };
 
   void _ausJson(Map<String, dynamic> d) {
     final e = Map<String, dynamic>.from(d['einstellungen'] as Map? ?? const {});
     farbe = Pastell.values.asNameMap()[e['farbe']] ?? Pastell.salbei;
     themeMode = ThemeMode.values.asNameMap()[e['themeMode']] ?? ThemeMode.system;
+    googleAktiv = e['googleAktiv'] as bool? ?? false;
+    final k =Map<String, dynamic>.from(d['kalender'] as Map? ?? const {});
+    kalenderId = k['id'] as String?;
+    zuLoeschendeTermine = [
+      for (final id in (k['zuLoeschen'] as List? ?? const [])) id as String,
+    ];
+    termine = [
+      for (final t in (k['termine'] as List? ?? const []))
+        Termin.fromJson(Map<String, dynamic>.from(t as Map)),
+    ];
+    termineStand = k['stand'] is String ? DateTime.tryParse(k['stand'] as String) : null;
     _datenAusJson(d);
   }
 
@@ -230,6 +265,8 @@ class AufgabenStore extends ChangeNotifier {
 
   void loeschen(String id) {
     _merken();
+    final eventId = aufgabe(id)?.kalenderEventId;
+    if (eventId != null) zuLoeschendeTermine.add(eventId);
     aufgaben.removeWhere((a) => a.id == id);
     _geaendert();
   }
@@ -265,6 +302,38 @@ class AufgabenStore extends ChangeNotifier {
     for (final a in aufgaben) {
       if (a.listeId == id) a.listeId = ersatz;
     }
+    _geaendert();
+  }
+
+  // ------------------------------------------------------------ Google Kalender
+
+  /// Termine an einem Tag, sortiert (ganztägige zuerst).
+  List<Termin> termineAm(DateTime tag) => termine.where((t) => t.amTag(tag)).toList()
+    ..sort((a, b) {
+      if (a.ganztaegig != b.ganztaegig) return a.ganztaegig ? -1 : 1;
+      return a.start.compareTo(b.start);
+    });
+
+  void termineSetzen(List<Termin> neu) {
+    termine = neu;
+    termineStand = DateTime.now();
+    _geaendert();
+  }
+
+  void googleAktivSetzen(bool wert) {
+    if (googleAktiv == wert) return;
+    googleAktiv = wert;
+    _geaendert();
+  }
+
+  /// Vom Kalender-Abgleich aufgerufen (Event-IDs gesetzt usw.), ohne Rückgängig.
+  void kalenderDatenGeaendert() => _geaendert();
+
+  /// Beim Trennen von Google: Termine ausblenden. Die Verknüpfungen bleiben,
+  /// damit beim erneuten Verbinden keine doppelten Einträge entstehen.
+  void termineAusblenden() {
+    termine = [];
+    termineStand = null;
     _geaendert();
   }
 

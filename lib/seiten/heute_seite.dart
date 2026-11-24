@@ -6,6 +6,7 @@ import '../design.dart';
 import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
+import '../widgets/termin_kachel.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Startseite „Heute“.
@@ -51,6 +52,16 @@ class HeuteSeite extends StatelessWidget {
     }).toList()
       ..sort((a, b) => a.frist!.compareTo(b.frist!));
 
+    // Google-Termine von heute: ganztägige oben, die anderen im Zeitplan
+    final termine = store.termineAm(h);
+    final ganztaegig = termine.where((t) => t.ganztaegig).toList();
+    final zeitplan = <(int, Widget)>[
+      for (final t in termine.where((t) => !t.ganztaegig))
+        (terminMinute(t, h), TerminKachel(termin: t, tag: h)),
+      for (final a in mitZeit)
+        (a.uhrzeit!, AufgabeKachel(aufgabe: a, zeigeUhrzeit: false)),
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
+
     final gesamt = offenHeute.length + erledigtHeute.length;
     final fortschritt = gesamt == 0 ? 0.0 : erledigtHeute.length / gesamt;
 
@@ -73,32 +84,41 @@ class HeuteSeite extends StatelessWidget {
           const SizedBox(height: 10),
           _UeberfaelligKarte(aufgaben: ueberfaellig),
         ],
-        if (mitZeit.isNotEmpty) ...[
-          const Abschnitt('Zeitplan', info: 'mit Uhrzeit'),
-          for (final a in mitZeit)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 48,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        uhrzeitText(a.uhrzeit!),
-                        style: text.labelLarge?.copyWith(
-                          color: farben.onSurfaceVariant,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
+        if (ganztaegig.isNotEmpty || zeitplan.isNotEmpty)
+          Abschnitt(
+            'Zeitplan',
+            info: termine.isEmpty
+                ? 'mit Uhrzeit'
+                : '${termine.length} ${termine.length == 1 ? 'Termin' : 'Termine'}',
+          ),
+        for (final t in ganztaegig)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TerminKachel(termin: t, tag: h),
+          ),
+        for (final (minute, kachel) in zeitplan)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 48,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Text(
+                      uhrzeitText(minute),
+                      style: text.labelLarge?.copyWith(
+                        color: farben.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                   ),
-                  Expanded(child: AufgabeKachel(aufgabe: a, zeigeUhrzeit: false)),
-                ],
-              ),
+                ),
+                Expanded(child: kachel),
+              ],
             ),
-        ],
+          ),
         Abschnitt('Heute erledigen', info: '${ohneZeit.length} offen'),
         if (ohneZeit.isEmpty)
           const LeerHinweis('Nichts mehr offen für heute. Genieß den Tag!')

@@ -115,6 +115,8 @@ class Aufgabe {
     this.erledigt = false,
     this.erledigtAm,
     DateTime? erstellt,
+    this.kalenderEventId,
+    this.kalenderStand,
   })  : id = id ?? neueId(),
         unteraufgaben = unteraufgaben ?? [],
         erstellt = erstellt ?? DateTime.now();
@@ -140,6 +142,19 @@ class Aufgabe {
   DateTime? erledigtAm;
   final DateTime erstellt;
 
+  /// ID des zugehörigen Eintrags im Google Kalender (falls eingetragen).
+  String? kalenderEventId;
+
+  /// Fingerabdruck des zuletzt übertragenen Stands. Ändert er sich, wird
+  /// der Kalendereintrag aktualisiert.
+  String? kalenderStand;
+
+  /// Nur Aufgaben mit Datum UND Uhrzeit kommen in den Kalender.
+  bool get gehoertInKalender => faellig != null && uhrzeit != null;
+
+  String get kalenderFingerabdruck =>
+      '$titel|$notiz|${faellig?.toIso8601String()}|$uhrzeit|$erledigt';
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'titel': titel,
@@ -154,6 +169,8 @@ class Aufgabe {
         'erledigt': erledigt,
         'erledigtAm': erledigtAm?.toIso8601String(),
         'erstellt': erstellt.toIso8601String(),
+        'kalenderEventId': kalenderEventId,
+        'kalenderStand': kalenderStand,
       };
 
   factory Aufgabe.fromJson(Map<String, dynamic> j) => Aufgabe(
@@ -177,6 +194,63 @@ class Aufgabe {
         erledigt: j['erledigt'] as bool? ?? false,
         erledigtAm: _datum(j['erledigtAm']),
         erstellt: _datum(j['erstellt']),
+        kalenderEventId: j['kalenderEventId'] as String?,
+        kalenderStand: j['kalenderStand'] as String?,
+      );
+}
+
+/// Ein Termin aus dem Google Kalender (nur zum Anzeigen).
+class Termin {
+  const Termin({
+    required this.id,
+    required this.titel,
+    required this.start,
+    required this.ende,
+    required this.ganztaegig,
+    required this.kalenderName,
+    this.farbe,
+    this.ort,
+  });
+
+  final String id;
+  final String titel;
+  final DateTime start;
+  final DateTime ende;
+  final bool ganztaegig;
+  final String kalenderName;
+
+  /// Farbe des Kalenders als 0xAARRGGBB (von Google).
+  final int? farbe;
+  final String? ort;
+
+  /// Liegt der Termin (ganz oder teilweise) an diesem Tag?
+  bool amTag(DateTime tag) {
+    final anfang = DateTime(tag.year, tag.month, tag.day);
+    final naechster = DateTime(tag.year, tag.month, tag.day + 1);
+    final effektivesEnde = ende.isAfter(start) ? ende : start.add(const Duration(minutes: 1));
+    return start.isBefore(naechster) && effektivesEnde.isAfter(anfang);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'titel': titel,
+        'start': start.toIso8601String(),
+        'ende': ende.toIso8601String(),
+        'ganztaegig': ganztaegig,
+        'kalenderName': kalenderName,
+        'farbe': farbe,
+        'ort': ort,
+      };
+
+  factory Termin.fromJson(Map<String, dynamic> j) => Termin(
+        id: j['id'] as String? ?? '',
+        titel: j['titel'] as String? ?? '',
+        start: _datum(j['start']) ?? DateTime.now(),
+        ende: _datum(j['ende']) ?? DateTime.now(),
+        ganztaegig: j['ganztaegig'] as bool? ?? false,
+        kalenderName: j['kalenderName'] as String? ?? '',
+        farbe: (j['farbe'] as num?)?.toInt(),
+        ort: j['ort'] as String?,
       );
 }
 
