@@ -194,7 +194,10 @@ void main() {
 
     await tester.tap(find.text('Listen').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(SegmentedButton<int>, 'Notizen'));
+    await tester.tap(find.descendant(
+      of: find.byType(SegmentedButton<int>),
+      matching: find.text('Notizen'),
+    ));
     await tester.pumpAndSettle();
     expect(find.text('Geschenkideen'), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));

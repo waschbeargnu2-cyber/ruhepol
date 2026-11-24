@@ -43,6 +43,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.aufgaben.where((a) => a.erledigt).length, 1);
+    await tester.scrollUntilVisible(
+      find.text('Heute erledigt'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Heute erledigt'), findsOneWidget);
 
     // Speicher-Timer und Snackbar ablaufen lassen
