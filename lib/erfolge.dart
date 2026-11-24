@@ -10,7 +10,7 @@ import 'modelle.dart';
 //     + 5 Bonus, wenn pünktlich erledigt
 //   Level: Level n braucht insgesamt 25·n·(n−1) Punkte (0, 50, 150, 300 …)
 //   Serie: Tage am Stück mit mindestens einer erledigten Aufgabe
-//   Abzeichen: siehe `abzeichen()` – eigene einfach dort ergänzen.
+//   Abzeichen: siehe `alleAbzeichen()` – eigene einfach dort ergänzen.
 // Alles wird aus dem Erledigt-Protokoll berechnet (aufgaben_store.dart).
 // ---------------------------------------------------------------------------
 
@@ -146,13 +146,13 @@ class Erfolge {
       laengsteSerie: laengste,
       letzte7Tage: letzte7,
       besterTag: besterTag,
-      abzeichen: abzeichen(log, laengste, besterTag),
+      abzeichen: alleAbzeichen(log, laengste, besterTag),
     );
   }
 }
 
 /// Alle Abzeichen mit aktuellem Stand.
-List<Abzeichen> abzeichen(List<ErledigtEintrag> log, int laengsteSerie, int besterTag) {
+List<Abzeichen> alleAbzeichen(List<ErledigtEintrag> log, int laengsteSerie, int besterTag) {
   final n = log.length;
   final frueh = log.where((e) => e.zeit.hour < 8).length;
   final spaet = log.where((e) => e.zeit.hour >= 22).length;
