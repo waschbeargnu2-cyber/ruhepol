@@ -5,7 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'aufgaben_store.dart';
 import 'design.dart';
-import 'google_kalender.dart';
+import 'handy_kalender.dart';
 import 'seiten/heute_seite.dart';
 import 'seiten/kalender_seite.dart';
 import 'seiten/listen_seite.dart';
@@ -20,8 +20,8 @@ import 'widgets/neue_aufgabe.dart';
 //   modelle.dart         Aufgabe, Liste, Wiederholung …
 //   speicher.dart        Speichern auf dem Handy
 //   eingabe_parser.dart  Erkennung von „morgen 15 Uhr #Liste !!“
-//   google_kalender.dart Anmeldung bei Google, Termine lesen/schreiben
-//   konfiguration.dart   Google-Client-ID und Kalender-Einstellungen
+//   handy_kalender.dart  Kalender des Handys lesen/schreiben (Google, Samsung …)
+//   konfiguration.dart   Kalender-Einstellungen (Name, Farbe, Dauer)
 //   design.dart          Farben und Symbole
 //   seiten/              Heute, Listen, Kalender, Mehr
 //   widgets/             Bausteine (Aufgaben-Kachel, Fenster …)
@@ -33,7 +33,7 @@ Future<void> main() async {
   await store.laden();
   final kalender = KalenderDienst(store);
   runApp(RuhepolApp(store: store, kalender: kalender));
-  // Google im Hintergrund verbinden, damit der Start nicht wartet.
+  // Kalender im Hintergrund laden, damit der Start nicht wartet.
   unawaited(kalender.starten());
 }
 
@@ -57,7 +57,7 @@ class _RuhepolAppState extends State<RuhepolApp> {
     _lebenszyklus = AppLifecycleListener(
       onHide: widget.store.sofortSpeichern,
       onPause: widget.store.sofortSpeichern,
-      // Beim Zurückkehren in die App Termine auffrischen (höchstens alle 2 Min.)
+      // Beim Zurückkehren in die App Termine auffrischen (höchstens 1x pro Minute)
       onResume: () => widget.kalender.aktualisierenFallsAlt(),
     );
   }

@@ -25,17 +25,18 @@ class AufgabenStore extends ChangeNotifier {
   Pastell farbe = Pastell.salbei;
   ThemeMode themeMode = ThemeMode.system;
 
-  // Google Kalender
-  /// Wurde Google schon einmal verbunden? Dann beim Start still neu verbinden.
-  bool googleAktiv = false;
+  // Kalender des Handys
+  /// Ist die Kalender-Anbindung eingeschaltet?
+  bool kalenderAktiv = false;
 
-  /// ID des eigenen Kalenders „Ruhepol“ bei Google.
+  /// Kalender, in den Aufgaben eingetragen werden (ID auf dem Handy).
+  /// null = eigener Kalender „Ruhepol“.
   String? kalenderId;
 
-  /// Kalendereinträge gelöschter Aufgaben, die noch bei Google zu entfernen sind.
+  /// Kalendereinträge gelöschter Aufgaben, die noch zu entfernen sind.
   List<String> zuLoeschendeTermine = [];
 
-  /// Zuletzt geladene Google-Termine (auch offline sichtbar).
+  /// Zuletzt geladene Termine.
   List<Termin> termine = [];
   DateTime? termineStand;
 
@@ -61,7 +62,7 @@ class AufgabenStore extends ChangeNotifier {
         'einstellungen': {
           'farbe': farbe.name,
           'themeMode': themeMode.name,
-          'googleAktiv': googleAktiv,
+          'kalenderAktiv': kalenderAktiv,
         },
         'listen': [for (final l in listen) l.toJson()],
         'aufgaben': [for (final a in aufgaben) a.toJson()],
@@ -77,7 +78,7 @@ class AufgabenStore extends ChangeNotifier {
     final e = Map<String, dynamic>.from(d['einstellungen'] as Map? ?? const {});
     farbe = Pastell.values.asNameMap()[e['farbe']] ?? Pastell.salbei;
     themeMode = ThemeMode.values.asNameMap()[e['themeMode']] ?? ThemeMode.system;
-    googleAktiv = e['googleAktiv'] as bool? ?? false;
+    kalenderAktiv = e['kalenderAktiv'] as bool? ?? false;
     final k =Map<String, dynamic>.from(d['kalender'] as Map? ?? const {});
     kalenderId = k['id'] as String?;
     zuLoeschendeTermine = [
@@ -305,7 +306,7 @@ class AufgabenStore extends ChangeNotifier {
     _geaendert();
   }
 
-  // ------------------------------------------------------------ Google Kalender
+  // ------------------------------------------------------------ Kalender
 
   /// Termine an einem Tag, sortiert (ganztägige zuerst).
   List<Termin> termineAm(DateTime tag) => termine.where((t) => t.amTag(tag)).toList()
@@ -320,17 +321,31 @@ class AufgabenStore extends ChangeNotifier {
     _geaendert();
   }
 
-  void googleAktivSetzen(bool wert) {
-    if (googleAktiv == wert) return;
-    googleAktiv = wert;
+  void kalenderAktivSetzen(bool wert) {
+    if (kalenderAktiv == wert) return;
+    kalenderAktiv = wert;
+    _geaendert();
+  }
+
+  /// Wechselt den Kalender für Aufgaben. Alte Einträge werden entfernt und
+  /// im neuen Kalender neu angelegt.
+  void zielKalenderSetzen(String? id) {
+    if (kalenderId == id) return;
+    for (final a in aufgaben) {
+      final e = a.kalenderEventId;
+      if (e != null) zuLoeschendeTermine.add(e);
+      a.kalenderEventId = null;
+      a.kalenderStand = null;
+    }
+    kalenderId = id;
     _geaendert();
   }
 
   /// Vom Kalender-Abgleich aufgerufen (Event-IDs gesetzt usw.), ohne Rückgängig.
   void kalenderDatenGeaendert() => _geaendert();
 
-  /// Beim Trennen von Google: Termine ausblenden. Die Verknüpfungen bleiben,
-  /// damit beim erneuten Verbinden keine doppelten Einträge entstehen.
+  /// Beim Ausschalten: Termine ausblenden. Die Verknüpfungen bleiben,
+  /// damit beim erneuten Einschalten keine doppelten Einträge entstehen.
   void termineAusblenden() {
     termine = [];
     termineStand = null;

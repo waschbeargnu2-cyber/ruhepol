@@ -17,12 +17,6 @@ dependencies:
     sdk: flutter
   # Findet den privaten Speicherordner der App auf dem Handy
   path_provider: ^2.1.5
-  # Anmeldung mit dem Google-Konto
-  google_sign_in: ^7.2.0
-  # Verbindet die Google-Anmeldung mit den Google-APIs
-  extension_google_sign_in_as_googleapis_auth: ^3.0.0
-  # Google Calendar API
-  googleapis: ^19.0.0
 
 dev_dependencies:
   flutter_test:

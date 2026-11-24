@@ -12,7 +12,7 @@ import '../widgets/termin_kachel.dart';
 // ERKLÄRUNG: Startseite „Heute“.
 // Oben: Fortschritt des Tages. Darunter: Überfälliges, dann der Zeitplan
 // (Aufgaben mit Uhrzeit), Aufgaben ohne Uhrzeit, kommende Fristen und
-// heute Erledigtes. Ab Version 0.3 erscheinen hier auch Google-Termine.
+// heute Erledigtes. Termine aus dem Handy-Kalender stehen im Zeitplan.
 // ---------------------------------------------------------------------------
 
 class HeuteSeite extends StatelessWidget {
@@ -52,7 +52,7 @@ class HeuteSeite extends StatelessWidget {
     }).toList()
       ..sort((a, b) => a.frist!.compareTo(b.frist!));
 
-    // Google-Termine von heute: ganztägige oben, die anderen im Zeitplan
+    // Kalender-Termine von heute: ganztägige oben, die anderen im Zeitplan
     final termine = store.termineAm(h);
     final ganztaegig = termine.where((t) => t.ganztaegig).toList();
     final zeitplan = <(int, Widget)>[

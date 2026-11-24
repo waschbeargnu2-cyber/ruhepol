@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../datum.dart';
 import '../modelle.dart';
 
-/// Ein Google-Termin, sanft in der Farbe seines Kalenders eingefärbt.
+/// Ein Kalender-Termin, sanft in der Farbe seines Kalenders eingefärbt.
 class TerminKachel extends StatelessWidget {
   const TerminKachel({super.key, required this.termin, this.tag});
 

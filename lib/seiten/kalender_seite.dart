@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../aufgaben_store.dart';
 import '../datum.dart';
-import '../google_kalender.dart';
+import '../handy_kalender.dart';
 import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
@@ -10,7 +10,7 @@ import '../widgets/termin_kachel.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Kalender.
-// Oben eine Wochenleiste, darunter der gewählte Tag mit Google-Terminen und
+// Oben eine Wochenleiste, darunter der gewählte Tag mit Kalender-Terminen und
 // Aufgaben. Smart: Die App sucht freie Zeitfenster (8–20 Uhr, mindestens
 // 60 Minuten) und schlägt die wichtigste ungeplante Aufgabe dafür vor.
 // Fenster anpassen: die Konstanten _tagBeginn/_tagEnde/_mindestLuecke.
@@ -436,7 +436,7 @@ class _Vorschlag extends StatelessWidget {
                   zeigeHinweis(
                     messenger,
                     '„${aufgabe.titel}“ eingeplant: ${relativ(tag)}, ${uhrzeitText(von)}'
-                    '${verbunden ? ' · kommt in den Google Kalender' : ''}',
+                    '${verbunden ? ' · kommt in deinen Kalender' : ''}',
                   );
                 },
                 icon: const Icon(Icons.event_available),
@@ -461,7 +461,7 @@ class _VerbindenHinweis extends StatelessWidget {
   Widget build(BuildContext context) {
     final farben = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final eingerichtet = dienst.status != KalenderStatus.nichtEingerichtet;
+    final dauerhaft = dienst.status == KalenderStatus.dauerhaftVerweigert;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -474,17 +474,21 @@ class _VerbindenHinweis extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              eingerichtet
-                  ? 'Verbinde Google, um hier deine Termine zu sehen.'
-                  : 'Google Kalender ist noch nicht eingerichtet.',
+              dauerhaft
+                  ? 'Erlaube Ruhepol in den App-Einstellungen den Kalender-Zugriff.'
+                  : 'Verbinde den Kalender deines Handys, um hier deine Termine zu sehen.',
               style: text.bodyMedium?.copyWith(color: farben.onSecondaryContainer),
             ),
           ),
-          if (eingerichtet)
-            FilledButton.tonal(
-              onPressed: dienst.status == KalenderStatus.verbinde ? null : dienst.verbinden,
-              child: const Text('Verbinden'),
-            ),
+          const SizedBox(width: 8),
+          FilledButton.tonal(
+            onPressed: dienst.status == KalenderStatus.verbinde
+                ? null
+                : dauerhaft
+                    ? dienst.einstellungenOeffnen
+                    : dienst.verbinden,
+            child: Text(dauerhaft ? 'Einstellungen' : 'Verbinden'),
+          ),
         ],
       ),
     );

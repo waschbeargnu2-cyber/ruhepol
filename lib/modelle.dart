@@ -142,7 +142,7 @@ class Aufgabe {
   DateTime? erledigtAm;
   final DateTime erstellt;
 
-  /// ID des zugehörigen Eintrags im Google Kalender (falls eingetragen).
+  /// ID des zugehörigen Eintrags im Handy-Kalender (falls eingetragen).
   String? kalenderEventId;
 
   /// Fingerabdruck des zuletzt übertragenen Stands. Ändert er sich, wird
@@ -199,7 +199,7 @@ class Aufgabe {
       );
 }
 
-/// Ein Termin aus dem Google Kalender (nur zum Anzeigen).
+/// Ein Termin aus dem Kalender des Handys (nur zum Anzeigen).
 class Termin {
   const Termin({
     required this.id,

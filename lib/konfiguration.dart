@@ -1,25 +1,16 @@
 // ---------------------------------------------------------------------------
-// ERKLÄRUNG: Einstellungen für die Google-Anbindung.
-// Die Web-Client-ID stammt aus der Google Cloud Console
-// (siehe docs/GOOGLE_EINRICHTUNG.md, Schritt 7). Sie ist nicht geheim.
+// ERKLÄRUNG: Einstellungen für die Kalender-Anbindung.
 // ---------------------------------------------------------------------------
 
-const googleWebClientId = 'NOCH_NICHT_EINGETRAGEN';
-
-bool get googleEingerichtet => googleWebClientId.endsWith('.apps.googleusercontent.com');
-
-/// Name des eigenen Kalenders, in den Ruhepol Aufgaben mit Uhrzeit einträgt.
+/// Name des eigenen Kalenders, den Ruhepol auf dem Handy anlegt.
 const ruhepolKalenderName = 'Ruhepol';
 
-/// Zeitzone für neue Kalendereinträge.
-const zeitzone = 'Europe/Berlin';
+/// Farbe dieses Kalenders (Salbei).
+const ruhepolKalenderFarbe = 0xFF7FA88C;
 
 /// Standarddauer eines Kalendereintrags für eine Aufgabe (Minuten).
 const standardDauerMinuten = 30;
 
-/// Berechtigungen: eigenen Kalender verwalten, andere Kalender nur lesen.
-const googleBerechtigungen = <String>[
-  'https://www.googleapis.com/auth/calendar.app.created',
-  'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
-  'https://www.googleapis.com/auth/calendar.events.readonly',
-];
+/// Zeitraum, aus dem Termine gelesen werden.
+const termineTageZurueck = 7;
+const termineTageVoraus = 60;

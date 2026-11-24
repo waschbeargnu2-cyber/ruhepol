@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ruhepol/aufgaben_store.dart';
-import 'package:ruhepol/google_kalender.dart';
+import 'package:ruhepol/handy_kalender.dart';
 import 'package:ruhepol/main.dart';
 import 'package:ruhepol/modelle.dart';
 import 'package:ruhepol/speicher.dart';
