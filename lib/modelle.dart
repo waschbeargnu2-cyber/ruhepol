@@ -117,6 +117,7 @@ class Aufgabe {
     DateTime? erstellt,
     this.kalenderEventId,
     this.kalenderStand,
+    this.erinnern = true,
   })  : id = id ?? neueId(),
         unteraufgaben = unteraufgaben ?? [],
         erstellt = erstellt ?? DateTime.now();
@@ -149,6 +150,9 @@ class Aufgabe {
   /// der Kalendereintrag aktualisiert.
   String? kalenderStand;
 
+  /// Soll Ruhepol an diese Aufgabe erinnern?
+  bool erinnern;
+
   /// Nur Aufgaben mit Datum UND Uhrzeit kommen in den Kalender.
   bool get gehoertInKalender => faellig != null && uhrzeit != null;
 
@@ -171,6 +175,7 @@ class Aufgabe {
         'erstellt': erstellt.toIso8601String(),
         'kalenderEventId': kalenderEventId,
         'kalenderStand': kalenderStand,
+        'erinnern': erinnern,
       };
 
   factory Aufgabe.fromJson(Map<String, dynamic> j) => Aufgabe(
@@ -196,6 +201,53 @@ class Aufgabe {
         erstellt: _datum(j['erstellt']),
         kalenderEventId: j['kalenderEventId'] as String?,
         kalenderStand: j['kalenderStand'] as String?,
+        erinnern: j['erinnern'] as bool? ?? true,
+      );
+}
+
+/// Einstellungen für Erinnerungen (Zeiten in Minuten seit Mitternacht).
+class ErinnerungsEinstellungen {
+  ErinnerungsEinstellungen({
+    this.aktiv = false,
+    this.vorlauf = 15,
+    this.morgens = 8 * 60,
+    this.fristen = true,
+    this.uebersicht = true,
+    this.uebersichtUm = 7 * 60 + 30,
+  });
+
+  bool aktiv;
+
+  /// So viele Minuten vor der Uhrzeit einer Aufgabe wird erinnert.
+  int vorlauf;
+
+  /// Uhrzeit für Aufgaben ohne Uhrzeit und für Fristen.
+  int morgens;
+
+  /// An Fristen erinnern (3 Tage, 1 Tag vorher und am Tag selbst).
+  bool fristen;
+
+  /// Morgendliche Tagesübersicht.
+  bool uebersicht;
+  int uebersichtUm;
+
+  Map<String, dynamic> toJson() => {
+        'aktiv': aktiv,
+        'vorlauf': vorlauf,
+        'morgens': morgens,
+        'fristen': fristen,
+        'uebersicht': uebersicht,
+        'uebersichtUm': uebersichtUm,
+      };
+
+  factory ErinnerungsEinstellungen.fromJson(Map<String, dynamic> j) =>
+      ErinnerungsEinstellungen(
+        aktiv: j['aktiv'] as bool? ?? false,
+        vorlauf: (j['vorlauf'] as num?)?.toInt() ?? 15,
+        morgens: (j['morgens'] as num?)?.toInt() ?? 8 * 60,
+        fristen: j['fristen'] as bool? ?? true,
+        uebersicht: j['uebersicht'] as bool? ?? true,
+        uebersichtUm: (j['uebersichtUm'] as num?)?.toInt() ?? 7 * 60 + 30,
       );
 }
 

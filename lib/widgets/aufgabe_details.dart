@@ -122,6 +122,19 @@ class _AufgabeDetailsState extends State<AufgabeDetails> {
     _store.geaendert();
   }
 
+  String _erinnerungsText(Aufgabe a) {
+    final e = _store.erinnerung;
+    if (!a.erinnern) return 'Keine Erinnerung';
+    if (!e.aktiv) return 'Erinnerungen sind unter „Mehr“ ausgeschaltet';
+    final teile = <String>[
+      if (a.faellig != null && a.uhrzeit != null)
+        e.vorlauf == 0 ? 'zur Uhrzeit' : '${e.vorlauf} Min. vorher',
+      if (a.faellig != null && a.uhrzeit == null) 'am Tag um ${uhrzeitText(e.morgens)}',
+      if (a.frist != null && e.fristen) 'vor der Frist',
+    ];
+    return teile.isEmpty ? 'Erst mit Datum oder Frist' : teile.join(', ');
+  }
+
   void _unteraufgabeHinzufuegen(Aufgabe a) {
     final t = _neueUnteraufgabe.text.trim();
     if (t.isEmpty) return;
@@ -282,6 +295,20 @@ class _AufgabeDetailsState extends State<AufgabeDetails> {
                   _store.geaendert();
                 },
               ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                a.erinnern ? Icons.notifications_active : Icons.notifications_off_outlined,
+                color: farben.onSurfaceVariant,
+              ),
+              title: const Text('Erinnern'),
+              subtitle: Text(_erinnerungsText(a)),
+              value: a.erinnern,
+              onChanged: (v) {
+                a.erinnern = v;
+                _store.geaendert();
+              },
+            ),
             const SizedBox(height: 12),
 
             // Unteraufgaben

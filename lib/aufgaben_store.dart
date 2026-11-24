@@ -25,6 +25,8 @@ class AufgabenStore extends ChangeNotifier {
   Pastell farbe = Pastell.salbei;
   ThemeMode themeMode = ThemeMode.system;
 
+  ErinnerungsEinstellungen erinnerung = ErinnerungsEinstellungen();
+
   // Kalender des Handys
   /// Ist die Kalender-Anbindung eingeschaltet?
   bool kalenderAktiv = false;
@@ -63,6 +65,7 @@ class AufgabenStore extends ChangeNotifier {
           'farbe': farbe.name,
           'themeMode': themeMode.name,
           'kalenderAktiv': kalenderAktiv,
+          'erinnerungen': erinnerung.toJson(),
         },
         'listen': [for (final l in listen) l.toJson()],
         'aufgaben': [for (final a in aufgaben) a.toJson()],
@@ -79,6 +82,9 @@ class AufgabenStore extends ChangeNotifier {
     farbe = Pastell.values.asNameMap()[e['farbe']] ?? Pastell.salbei;
     themeMode = ThemeMode.values.asNameMap()[e['themeMode']] ?? ThemeMode.system;
     kalenderAktiv = e['kalenderAktiv'] as bool? ?? false;
+    erinnerung = ErinnerungsEinstellungen.fromJson(
+      Map<String, dynamic>.from(e['erinnerungen'] as Map? ?? const {}),
+    );
     final k =Map<String, dynamic>.from(d['kalender'] as Map? ?? const {});
     kalenderId = k['id'] as String?;
     zuLoeschendeTermine = [
@@ -256,6 +262,7 @@ class AufgabenStore extends ChangeNotifier {
           for (final u in a.unteraufgaben) Unteraufgabe(titel: u.titel),
         ],
         wiederholung: w,
+        erinnern: a.erinnern,
       );
       a.wiederholung = null; // nur die neue Aufgabe wiederholt sich weiter
       aufgaben.add(naechste);
@@ -356,6 +363,13 @@ class AufgabenStore extends ChangeNotifier {
 
   void farbeSetzen(Pastell p) {
     farbe = p;
+    _geaendert();
+  }
+
+  /// Ändert die Erinnerungs-Einstellungen, z. B.
+  /// `store.erinnerungAendern((e) => e.vorlauf = 30)`.
+  void erinnerungAendern(void Function(ErinnerungsEinstellungen e) aenderung) {
+    aenderung(erinnerung);
     _geaendert();
   }
 

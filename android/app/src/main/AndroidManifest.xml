@@ -2,6 +2,13 @@
     <!-- Zugriff auf den Kalender des Handys (Google, Samsung …) -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <!-- Erinnerungen: Benachrichtigungen, pünktliche Wecker, Neustart -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
     <application
         android:label="Ruhepol"
         android:name="${applicationName}"
@@ -28,6 +35,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Erinnerungen (siehe Erinnerungen.kt) -->
+        <receiver
+            android:name=".ErinnerungsEmpfaenger"
+            android:exported="false" />
+        <receiver
+            android:name=".StartEmpfaenger"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

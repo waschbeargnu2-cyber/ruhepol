@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'aufgaben_store.dart';
 import 'design.dart';
+import 'erinnerungen.dart';
 import 'handy_kalender.dart';
 import 'seiten/heute_seite.dart';
 import 'seiten/kalender_seite.dart';
@@ -21,6 +22,7 @@ import 'widgets/neue_aufgabe.dart';
 //   speicher.dart        Speichern auf dem Handy
 //   eingabe_parser.dart  Erkennung von „morgen 15 Uhr #Liste !!“
 //   handy_kalender.dart  Kalender des Handys lesen/schreiben (Google, Samsung …)
+//   erinnerungen.dart    Wann woran erinnert wird (Android stellt die Wecker)
 //   konfiguration.dart   Kalender-Einstellungen (Name, Farbe, Dauer)
 //   design.dart          Farben und Symbole
 //   seiten/              Heute, Listen, Kalender, Mehr
@@ -32,16 +34,24 @@ Future<void> main() async {
   final store = AufgabenStore(DateiSpeicher());
   await store.laden();
   final kalender = KalenderDienst(store);
-  runApp(RuhepolApp(store: store, kalender: kalender));
-  // Kalender im Hintergrund laden, damit der Start nicht wartet.
+  final erinnerungen = ErinnerungsDienst(store);
+  runApp(RuhepolApp(store: store, kalender: kalender, erinnerungen: erinnerungen));
+  // Kalender und Erinnerungen im Hintergrund laden, damit der Start nicht wartet.
   unawaited(kalender.starten());
+  unawaited(erinnerungen.starten());
 }
 
 class RuhepolApp extends StatefulWidget {
-  const RuhepolApp({super.key, required this.store, required this.kalender});
+  const RuhepolApp({
+    super.key,
+    required this.store,
+    required this.kalender,
+    required this.erinnerungen,
+  });
 
   final AufgabenStore store;
   final KalenderDienst kalender;
+  final ErinnerungsDienst erinnerungen;
 
   @override
   State<RuhepolApp> createState() => _RuhepolAppState();
@@ -58,7 +68,11 @@ class _RuhepolAppState extends State<RuhepolApp> {
       onHide: widget.store.sofortSpeichern,
       onPause: widget.store.sofortSpeichern,
       // Beim Zurückkehren in die App Termine auffrischen (höchstens 1x pro Minute)
-      onResume: () => widget.kalender.aktualisierenFallsAlt(),
+      // und per Benachrichtigung erledigte Aufgaben übernehmen.
+      onResume: () {
+        widget.kalender.aktualisierenFallsAlt();
+        widget.erinnerungen.starten();
+      },
     );
   }
 
@@ -75,6 +89,8 @@ class _RuhepolAppState extends State<RuhepolApp> {
       store: store,
       child: KalenderScope(
         dienst: widget.kalender,
+        child: ErinnerungsScope(
+        dienst: widget.erinnerungen,
         child: ListenableBuilder(
         listenable: store,
         builder: (context, _) => MaterialApp(
@@ -87,6 +103,7 @@ class _RuhepolAppState extends State<RuhepolApp> {
           supportedLocales: const [Locale('de')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: const Startseite(),
+        ),
         ),
         ),
       ),

@@ -30,10 +30,12 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val KANAL = "ruhepol/kalender"
         private const val ANFRAGE_CODE = 4711
+        private const val ANFRAGE_BENACHRICHTIGUNG = 4712
         private const val KONTO = "Ruhepol"
     }
 
     private var offeneAnfrage: MethodChannel.Result? = null
+    private var offeneBenachrichtigungsAnfrage: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -77,6 +79,28 @@ class MainActivity : FlutterActivity() {
             )
             "eintragSpeichern" -> result.success(eintragSpeichern(call))
             "eintragLoeschen" -> result.success(eintragLoeschen(call.argument<String>("id")!!))
+
+            // Erinnerungen
+            "benachrichtigungStatus" -> result.success(benachrichtigungsStatus())
+            "benachrichtigungAnfragen" -> benachrichtigungAnfragen(result)
+            "exakteWecker" -> result.success(ErinnerungsPlaner.exakteWeckerErlaubt(this))
+            "erinnerungenPlanen" -> {
+                val liste = call.argument<List<Map<String, Any?>>>("liste") ?: emptyList()
+                ErinnerungsPlaner.planen(this, liste)
+                result.success(liste.size)
+            }
+            "testErinnerung" -> {
+                ErinnerungsPlaner.stellen(
+                    this,
+                    99999,
+                    System.currentTimeMillis() + 10_000L,
+                    "Ruhepol",
+                    "So sehen deine Erinnerungen aus.",
+                    ""
+                )
+                result.success(null)
+            }
+            "erledigteAbholen" -> result.success(ErinnerungsPlaner.erledigteAbholen(this))
             else -> result.notImplemented()
         }
     }
@@ -117,16 +141,52 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun benachrichtigungsStatus(): String {
+        if (ErinnerungsPlaner.benachrichtigungenErlaubt(this)) return "erteilt"
+        if (Build.VERSION.SDK_INT < 33) return "dauerhaftVerweigert" // in den Einstellungen aus
+        val gefragt = getSharedPreferences("ruhepol", MODE_PRIVATE)
+            .getBoolean("benachrichtigungGefragt", false)
+        if (!gefragt) return "nichtGefragt"
+        return if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+            "verweigert"
+        } else {
+            "dauerhaftVerweigert"
+        }
+    }
+
+    private fun benachrichtigungAnfragen(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < 33 || ErinnerungsPlaner.benachrichtigungenErlaubt(this)) {
+            result.success(benachrichtigungsStatus())
+            return
+        }
+        if (offeneBenachrichtigungsAnfrage != null) {
+            result.error("laeuft", "Es läuft schon eine Anfrage", null)
+            return
+        }
+        getSharedPreferences("ruhepol", MODE_PRIVATE).edit()
+            .putBoolean("benachrichtigungGefragt", true).apply()
+        offeneBenachrichtigungsAnfrage = result
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), ANFRAGE_BENACHRICHTIGUNG)
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != ANFRAGE_CODE) return
-        val antwort = offeneAnfrage ?: return
-        offeneAnfrage = null
-        antwort.success(berechtigungsStatus())
+        when (requestCode) {
+            ANFRAGE_CODE -> {
+                val antwort = offeneAnfrage ?: return
+                offeneAnfrage = null
+                antwort.success(berechtigungsStatus())
+            }
+            ANFRAGE_BENACHRICHTIGUNG -> {
+                val antwort = offeneBenachrichtigungsAnfrage ?: return
+                offeneBenachrichtigungsAnfrage = null
+                antwort.success(benachrichtigungsStatus())
+            }
+        }
     }
 
     // ------------------------------------------------------------ Lesen

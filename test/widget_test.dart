@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ruhepol/aufgaben_store.dart';
+import 'package:ruhepol/erinnerungen.dart';
 import 'package:ruhepol/handy_kalender.dart';
 import 'package:ruhepol/main.dart';
 import 'package:ruhepol/modelle.dart';
@@ -16,7 +17,11 @@ void main() {
     final speicher = ArbeitsspeicherSpeicher();
     final store = await _store(speicher);
 
-    await tester.pumpWidget(RuhepolApp(store: store, kalender: KalenderDienst(store)));
+    await tester.pumpWidget(RuhepolApp(
+      store: store,
+      kalender: KalenderDienst(store),
+      erinnerungen: ErinnerungsDienst(store),
+    ));
     await tester.pumpAndSettle();
 
     expect(find.text('Heute'), findsWidgets);
@@ -27,7 +32,11 @@ void main() {
   testWidgets('Abhaken verschiebt Aufgabe zu „Heute erledigt“', (tester) async {
     final store = await _store();
 
-    await tester.pumpWidget(RuhepolApp(store: store, kalender: KalenderDienst(store)));
+    await tester.pumpWidget(RuhepolApp(
+      store: store,
+      kalender: KalenderDienst(store),
+      erinnerungen: ErinnerungsDienst(store),
+    ));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Erledigen').first);
@@ -57,7 +66,11 @@ void main() {
       ),
     ]);
 
-    await tester.pumpWidget(RuhepolApp(store: store, kalender: KalenderDienst(store)));
+    await tester.pumpWidget(RuhepolApp(
+      store: store,
+      kalender: KalenderDienst(store),
+      erinnerungen: ErinnerungsDienst(store),
+    ));
     await tester.pumpAndSettle();
 
     expect(find.text('Mittagessen mit Jonas'), findsOneWidget);

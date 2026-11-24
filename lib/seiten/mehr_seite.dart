@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../aufgaben_store.dart';
 import '../datum.dart';
 import '../design.dart';
+import '../erinnerungen.dart';
 import '../handy_kalender.dart';
 import '../widgets/hinweis.dart';
 
@@ -25,6 +26,9 @@ class MehrSeite extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text('Mehr', style: text.headlineMedium),
+
+        const Abschnitt('Erinnerungen'),
+        const _ErinnerungsKarte(),
 
         const Abschnitt('Kalender'),
         const _KalenderKarte(),
@@ -107,20 +111,210 @@ class MehrSeite extends StatelessWidget {
           ),
         ),
 
-        const Abschnitt('Demnächst'),
-        const ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.notifications_outlined),
-          title: Text('Erinnerungen'),
-          subtitle: Text('Vor Fristen und zur Uhrzeit'),
-        ),
+        const SizedBox(height: 8),
         const ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.info_outline),
           title: Text('Version'),
-          subtitle: Text('0.3'),
+          subtitle: Text('0.4'),
         ),
       ],
+    );
+  }
+}
+
+class _ErinnerungsKarte extends StatelessWidget {
+  const _ErinnerungsKarte();
+
+  static const _vorlaufOptionen = [0, 5, 10, 15, 30, 60];
+
+  String _vorlaufText(int minuten) =>
+      minuten == 0 ? 'Genau zur Uhrzeit' : '$minuten Minuten vorher';
+
+  Future<void> _zeitWaehlen(
+    BuildContext context,
+    int aktuell,
+    String hilfe,
+    void Function(int minute) setzen,
+  ) async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: aktuell ~/ 60, minute: aktuell % 60),
+      helpText: hilfe,
+    );
+    if (t != null) setzen(t.hour * 60 + t.minute);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dienst = ErinnerungsScope.of(context);
+    final store = StoreScope.of(context);
+    final e = store.erinnerung;
+    final farben = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    final inhalt = <Widget>[];
+    if (dienst.aktiv) {
+      final n = dienst.naechste;
+      inhalt.addAll([
+        Row(
+          children: [
+            Icon(Icons.notifications_active, color: farben.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${dienst.geplant} Erinnerungen geplant'
+                '${n != null ? ' · nächste: ${relativ(n.zeit)}, '
+                    '${uhrzeitText(n.zeit.hour * 60 + n.zeit.minute)} Uhr' : ''}',
+                style: text.titleSmall,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.schedule),
+          title: const Text('Aufgaben mit Uhrzeit'),
+          subtitle: Text(_vorlaufText(e.vorlauf)),
+          onTap: () async {
+            final wahl = await showDialog<int>(
+              context: context,
+              builder: (context) => SimpleDialog(
+                title: const Text('Erinnern'),
+                children: [
+                  for (final m in _vorlaufOptionen)
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.of(context).pop(m),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(_vorlaufText(m)),
+                      ),
+                    ),
+                ],
+              ),
+            );
+            if (wahl != null) store.erinnerungAendern((x) => x.vorlauf = wahl);
+          },
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.wb_sunny_outlined),
+          title: const Text('Aufgaben ohne Uhrzeit und Fristen'),
+          subtitle: Text('Am Tag um ${uhrzeitText(e.morgens)} Uhr'),
+          onTap: () => _zeitWaehlen(
+            context,
+            e.morgens,
+            'Erinnerung ohne Uhrzeit',
+            (m) => store.erinnerungAendern((x) => x.morgens = m),
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.flag_outlined),
+          title: const Text('An Fristen erinnern'),
+          subtitle: const Text('3 Tage, 1 Tag vorher und am Tag selbst'),
+          value: e.fristen,
+          onChanged: (v) => store.erinnerungAendern((x) => x.fristen = v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.wb_twilight),
+          title: const Text('Morgen-Übersicht'),
+          subtitle: Text('Dein Tag auf einen Blick um ${uhrzeitText(e.uebersichtUm)} Uhr'),
+          value: e.uebersicht,
+          onChanged: (v) => store.erinnerungAendern((x) => x.uebersicht = v),
+        ),
+        if (e.uebersicht)
+          ListTile(
+            contentPadding: const EdgeInsets.only(left: 40),
+            title: const Text('Uhrzeit der Übersicht'),
+            subtitle: Text('${uhrzeitText(e.uebersichtUm)} Uhr'),
+            onTap: () => _zeitWaehlen(
+              context,
+              e.uebersichtUm,
+              'Morgen-Übersicht',
+              (m) => store.erinnerungAendern((x) => x.uebersichtUm = m),
+            ),
+          ),
+        if (!dienst.exakt)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Hinweis: Android erlaubt gerade keine minutengenauen Wecker. '
+              'Erinnerungen können ein paar Minuten später kommen.',
+              style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
+            ),
+          ),
+        Text(
+          'Tipp: Kommen Erinnerungen zu spät, nimm Ruhepol unter Einstellungen → '
+          'Akku → Hintergrundnutzungslimits aus den „schlafenden Apps“ heraus.',
+          style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.tonalIcon(
+              onPressed: () {
+                final messenger = ScaffoldMessenger.of(context);
+                dienst.testErinnerung();
+                zeigeHinweis(messenger, 'Test-Erinnerung kommt in 10 Sekunden');
+              },
+              icon: const Icon(Icons.notifications_outlined),
+              label: const Text('Test in 10 Sek.'),
+            ),
+            TextButton(
+              onPressed: dienst.ausschalten,
+              child: const Text('Ausschalten'),
+            ),
+          ],
+        ),
+      ]);
+    } else {
+      final dauerhaft = dienst.status == ErinnerungsStatus.dauerhaftVerweigert;
+      inhalt.addAll([
+        Text(
+          'Ruhepol erinnert dich zur Uhrzeit einer Aufgabe, vor Fristen und auf '
+          'Wunsch jeden Morgen mit einer Tagesübersicht. In der Benachrichtigung '
+          'kannst du Aufgaben direkt abhaken oder um eine Stunde verschieben.',
+          style: text.bodyMedium,
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: dienst.status == ErinnerungsStatus.verbinde
+              ? null
+              : dauerhaft
+                  ? dienst.einstellungenOeffnen
+                  : dienst.einschalten,
+          icon: Icon(dauerhaft ? Icons.settings : Icons.notifications_active),
+          label: Text(dauerhaft ? 'App-Einstellungen öffnen' : 'Erinnerungen einschalten'),
+        ),
+        if (dauerhaft) ...[
+          const SizedBox(height: 4),
+          TextButton(onPressed: dienst.einschalten, child: const Text('Erneut prüfen')),
+        ],
+      ]);
+    }
+    if (dienst.fehler != null) {
+      inhalt.addAll([
+        const SizedBox(height: 10),
+        Text(dienst.fehler!, style: text.bodySmall?.copyWith(color: farben.error)),
+      ]);
+    }
+
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      color: farben.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: inhalt,
+        ),
+      ),
     );
   }
 }
