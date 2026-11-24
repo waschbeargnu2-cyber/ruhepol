@@ -9,6 +9,7 @@ import '../widgets/hinweis.dart';
 import '../widgets/neue_aufgabe.dart';
 import 'matrix_ansicht.dart';
 import 'notizen_ansicht.dart';
+import 'suche_seite.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Listen und smarte Filter.
@@ -59,7 +60,18 @@ class _ListenSeiteState extends State<ListenSeite> {
         style: text.labelLarge?.copyWith(color: farben.onSurfaceVariant),
       ),
       const SizedBox(height: 2),
-      Text(['Listen', 'Matrix', 'Notizen'][_ansicht], style: text.headlineMedium),
+      Row(
+        children: [
+          Expanded(
+            child: Text(['Listen', 'Matrix', 'Notizen'][_ansicht], style: text.headlineMedium),
+          ),
+          IconButton.filledTonal(
+            tooltip: 'Suchen',
+            onPressed: () => oeffneSuche(context),
+            icon: const Icon(Icons.search),
+          ),
+        ],
+      ),
       const SizedBox(height: 12),
       SizedBox(
         width: double.infinity,

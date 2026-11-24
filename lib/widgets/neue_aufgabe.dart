@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../aufgaben_store.dart';
 import '../datum.dart';
@@ -113,6 +114,27 @@ class _NeueAufgabeState extends State<NeueAufgabe> {
       text: t,
       selection: TextSelection.collapsed(offset: t.length),
     );
+  }
+
+  /// Spracheingabe: Android-Spracherkennung (Deutsch). Der erkannte Satz wird
+  /// angehängt bzw. eingesetzt und wie getippter Text ausgewertet.
+  Future<void> _sprechen() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final text = await const MethodChannel('ruhepol/kalender').invokeMethod<String>('spracheingabe');
+      if (text == null || text.trim().isEmpty || !mounted) return;
+      final bisher = _eingabe.text.trim();
+      _setzeText(bisher.isEmpty ? text.trim() : '$bisher ${text.trim()}');
+    } on PlatformException catch (e) {
+      zeigeHinweis(
+        messenger,
+        e.code == 'nichtVerfuegbar'
+            ? 'Keine Spracherkennung gefunden. Ist die Google-App installiert?'
+            : 'Spracheingabe fehlgeschlagen.',
+      );
+    } on MissingPluginException {
+      // Kein Android
+    }
   }
 
   ParseErgebnis get _ergebnis =>
@@ -236,6 +258,11 @@ class _NeueAufgabeState extends State<NeueAufgabe> {
               decoration: InputDecoration(
                 hintText: 'z. B. Zahnarzt morgen 15 Uhr #Gesundheit',
                 filled: true,
+                suffixIcon: IconButton(
+                  tooltip: 'Spracheingabe',
+                  onPressed: _sprechen,
+                  icon: const Icon(Icons.mic_none),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,

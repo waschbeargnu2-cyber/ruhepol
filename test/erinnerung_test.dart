@@ -10,7 +10,7 @@ void main() {
   final jetzt = DateTime(2026, 11, 24, 10);
   final listen = [Liste(id: 'privat', name: 'Privat', farbe: 0, icon: 'herz')];
   ErinnerungsEinstellungen ein({bool uebersicht = false}) =>
-      ErinnerungsEinstellungen(aktiv: true, uebersicht: uebersicht);
+      ErinnerungsEinstellungen(aktiv: true, uebersicht: uebersicht, rueckblick: false);
 
   List<Erinnerung> plane(List<Aufgabe> aufgaben,
           {ErinnerungsEinstellungen? e, List<Termin> termine = const []}) =>

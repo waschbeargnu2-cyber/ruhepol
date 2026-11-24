@@ -7,6 +7,7 @@ import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
 import '../tagesplanung.dart';
+import 'suche_seite.dart';
 import '../updates.dart';
 import '../widgets/termin_kachel.dart';
 
@@ -75,7 +76,16 @@ class HeuteSeite extends StatelessWidget {
           style: text.labelLarge?.copyWith(color: farben.onSurfaceVariant),
         ),
         const SizedBox(height: 2),
-        Text(gruss, style: text.headlineMedium),
+        Row(
+          children: [
+            Expanded(child: Text(gruss, style: text.headlineMedium)),
+            IconButton.filledTonal(
+              tooltip: 'Suchen',
+              onPressed: () => oeffneSuche(context),
+              icon: const Icon(Icons.search),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         const _UpdateHinweis(),
         _TagesKarte(

@@ -83,9 +83,10 @@ Color prioFarbe(Prioritaet p, ColorScheme farben) {
   };
 }
 
-ThemeData ruhepolTheme(Pastell farbe, Brightness helligkeit) {
+/// [seed] = Grundfarbe (Pastell-Schema oder Farbe vom Hintergrundbild).
+ThemeData ruhepolTheme(Color seed, Brightness helligkeit) {
   final schema = ColorScheme.fromSeed(
-    seedColor: farbe.seed,
+    seedColor: seed,
     brightness: helligkeit,
   );
   return ThemeData(

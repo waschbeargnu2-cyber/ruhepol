@@ -20,8 +20,8 @@ import 'modelle.dart';
 String tagSchluessel(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-Map<String, Object?> _palette(Pastell farbe, Brightness helligkeit) {
-  final s = ruhepolTheme(farbe, helligkeit).colorScheme;
+Map<String, Object?> _palette(Color seed, Brightness helligkeit) {
+  final s = ruhepolTheme(seed, helligkeit).colorScheme;
   final hell = helligkeit == Brightness.light;
   final hintergrund = Color.alphaBlend(
     s.primaryContainer.withValues(alpha: hell ? 0.55 : 0.40),
@@ -72,8 +72,8 @@ Map<String, Object?> widgetDaten(AufgabenStore store, DateTime jetzt) {
       ThemeMode.dark => 'dunkel',
       _ => 'system',
     },
-    'hell': _palette(store.farbe, Brightness.light),
-    'dunkel': _palette(store.farbe, Brightness.dark),
+    'hell': _palette(store.seedFarbe, Brightness.light),
+    'dunkel': _palette(store.seedFarbe, Brightness.dark),
     'aufgaben': [
       for (final a in aufgaben.take(30))
         {

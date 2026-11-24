@@ -48,11 +48,28 @@ class MehrSeite extends StatelessWidget {
                 label: Text(p.label),
                 avatar: CircleAvatar(backgroundColor: p.seed),
                 showCheckmark: false,
-                selected: p == store.farbe,
+                selected: p == store.farbe && !store.farbeVomHintergrund,
                 onSelected: (_) => store.farbeSetzen(p),
+              ),
+            if (store.systemFarbe != null)
+              ChoiceChip(
+                label: const Text('Vom Hintergrundbild'),
+                avatar: CircleAvatar(backgroundColor: store.systemFarbe),
+                showCheckmark: false,
+                selected: store.farbeVomHintergrund,
+                onSelected: (_) => store.farbeVomHintergrundSetzen(true),
               ),
           ],
         ),
+        if (store.systemFarbe != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              '„Vom Hintergrundbild“ nimmt die Akzentfarbe deines Galaxy (Material You) '
+              'und passt sich an, wenn du das Hintergrundbild wechselst.',
+              style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
+            ),
+          ),
 
         const Abschnitt('Hell oder dunkel'),
         SizedBox(
@@ -363,6 +380,14 @@ class _ErinnerungsKarte extends StatelessWidget {
           subtitle: Text('Dein Tag auf einen Blick um ${uhrzeitText(e.uebersichtUm)} Uhr'),
           value: e.uebersicht,
           onChanged: (v) => store.erinnerungAendern((x) => x.uebersicht = v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.auto_graph),
+          title: const Text('Wochenrückblick'),
+          subtitle: const Text('Sonntags um 18 Uhr'),
+          value: e.rueckblick,
+          onChanged: (v) => store.erinnerungAendern((x) => x.rueckblick = v),
         ),
         if (e.uebersicht)
           ListTile(

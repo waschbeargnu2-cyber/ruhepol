@@ -5,6 +5,7 @@ import '../datum.dart';
 import '../design.dart';
 import '../erfolge.dart';
 import '../modelle.dart';
+import '../wochenrueckblick.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
 
@@ -75,6 +76,31 @@ class _ErfolgeSeiteState extends State<ErfolgeSeite> {
         Text('Erfolge', style: text.headlineMedium),
         const SizedBox(height: 16),
         _LevelKarte(e: e),
+        const SizedBox(height: 10),
+        Material(
+          color: farben.tertiaryContainer,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => oeffneWochenrueckblick(context),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_graph, color: farben.onTertiaryContainer),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Wochenrückblick: ${e.dieseWoche} erledigt seit Montag',
+                      style: text.titleSmall?.copyWith(color: farben.onTertiaryContainer),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: farben.onTertiaryContainer),
+                ],
+              ),
+            ),
+          ),
+        ),
         const SizedBox(height: 10),
         Row(
           children: [

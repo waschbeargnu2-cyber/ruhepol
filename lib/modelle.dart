@@ -451,7 +451,11 @@ class ErinnerungsEinstellungen {
     this.fristen = true,
     this.uebersicht = true,
     this.uebersichtUm = 7 * 60 + 30,
+    this.rueckblick = true,
   });
+
+  /// Sonntags um 18 Uhr an den Wochenrückblick erinnern.
+  bool rueckblick;
 
   bool aktiv;
 
@@ -475,6 +479,7 @@ class ErinnerungsEinstellungen {
         'fristen': fristen,
         'uebersicht': uebersicht,
         'uebersichtUm': uebersichtUm,
+        'rueckblick': rueckblick,
       };
 
   factory ErinnerungsEinstellungen.fromJson(Map<String, dynamic> j) =>
@@ -485,6 +490,7 @@ class ErinnerungsEinstellungen {
         fristen: j['fristen'] as bool? ?? true,
         uebersicht: j['uebersicht'] as bool? ?? true,
         uebersichtUm: (j['uebersichtUm'] as num?)?.toInt() ?? 7 * 60 + 30,
+        rueckblick: j['rueckblick'] as bool? ?? true,
       );
 }
 

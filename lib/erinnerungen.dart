@@ -145,6 +145,16 @@ List<Erinnerung> planeErinnerungen({
     }
   }
 
+  // Wochenrückblick sonntags um 18 Uhr
+  if (e.rueckblick) {
+    for (var i = 0; i < _planungsTage; i++) {
+      final tag = plusTage(h, i);
+      if (tag.weekday != DateTime.sunday) continue;
+      hinzu(null, _um(tag, 18 * 60), 'Dein Wochenrückblick',
+          'Schau dir an, was du diese Woche geschafft hast.');
+    }
+  }
+
   final liste = nachSchluessel.values.toList()
     ..sort((a, b) => a.zeit.compareTo(b.zeit));
   final gekuerzt = liste.take(_maxErinnerungen).toList();

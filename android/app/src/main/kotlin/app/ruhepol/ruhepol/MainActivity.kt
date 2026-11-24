@@ -1,6 +1,7 @@
 package app.ruhepol.ruhepol
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
@@ -13,6 +14,7 @@ import android.provider.CalendarContract.Calendars
 import android.provider.CalendarContract.Events
 import android.provider.CalendarContract.Instances
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import androidx.core.content.pm.PackageInfoCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -33,6 +35,7 @@ class MainActivity : FlutterActivity() {
         private const val KANAL = "ruhepol/kalender"
         private const val ANFRAGE_CODE = 4711
         private const val ANFRAGE_BENACHRICHTIGUNG = 4712
+        private const val ANFRAGE_SPRACHE = 4713
         private const val KONTO = "Ruhepol"
         const val AKTION_NEU = "app.ruhepol.ruhepol.NEUE_AUFGABE"
     }
@@ -40,6 +43,21 @@ class MainActivity : FlutterActivity() {
     private var offeneAnfrage: MethodChannel.Result? = null
     private var offeneBenachrichtigungsAnfrage: MethodChannel.Result? = null
     private var kanal: MethodChannel? = null
+    private var offeneSprache: MethodChannel.Result? = null
+
+    @Deprecated("Für die Spracherkennung reicht die klassische Variante")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != ANFRAGE_SPRACHE) return
+        val antwort = offeneSprache ?: return
+        offeneSprache = null
+        val text = if (resultCode == RESULT_OK) {
+            data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        } else {
+            null
+        }
+        antwort.success(text)
+    }
 
     /** Aktion, mit der die App geöffnet wurde (Teilen, Kurzbefehl, Widget). */
     private var wartendeAktion: Map<String, Any?>? = null
@@ -151,6 +169,34 @@ class MainActivity : FlutterActivity() {
                 result.success(null)
             }
             "erledigteAbholen" -> result.success(ErinnerungsPlaner.erledigteAbholen(this))
+
+            // Material You: Akzentfarbe aus dem Hintergrundbild (ab Android 12)
+            "systemFarbe" -> result.success(
+                if (Build.VERSION.SDK_INT >= 31) getColor(android.R.color.system_accent1_500) else null
+            )
+
+            // Spracheingabe über die Spracherkennung des Handys
+            "spracheingabe" -> {
+                if (offeneSprache != null) {
+                    result.error("laeuft", "Spracheingabe läuft schon", null)
+                } else {
+                    val sprache = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(
+                            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                        )
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Aufgabe sprechen, z. B. „Zahnarzt morgen 15 Uhr“")
+                    }
+                    try {
+                        offeneSprache = result
+                        startActivityForResult(sprache, ANFRAGE_SPRACHE)
+                    } catch (e: ActivityNotFoundException) {
+                        offeneSprache = null
+                        result.error("nichtVerfuegbar", "Keine Spracherkennung gefunden", null)
+                    }
+                }
+            }
 
             // App-Start-Aktion (Teilen, Kurzbefehl, Widget)
             "startAktion" -> {

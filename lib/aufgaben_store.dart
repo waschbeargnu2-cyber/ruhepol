@@ -27,6 +27,27 @@ class AufgabenStore extends ChangeNotifier {
 
   ErinnerungsEinstellungen erinnerung = ErinnerungsEinstellungen();
 
+  /// Material You: Grundfarbe vom Hintergrundbild statt Pastell-Schema.
+  bool farbeVomHintergrund = false;
+
+  /// Akzentfarbe des Handys (ab Android 12), wird beim Start abgefragt.
+  Color? systemFarbe;
+
+  /// Die tatsächlich verwendete Grundfarbe der App.
+  Color get seedFarbe =>
+      farbeVomHintergrund && systemFarbe != null ? systemFarbe! : farbe.seed;
+
+  void systemFarbeSetzen(Color? c) {
+    if (systemFarbe == c) return;
+    systemFarbe = c;
+    notifyListeners();
+  }
+
+  void farbeVomHintergrundSetzen(bool wert) {
+    farbeVomHintergrund = wert;
+    _geaendert();
+  }
+
   /// Protokoll aller erledigten Aufgaben (für Statistik und Abzeichen).
   List<ErledigtEintrag> erledigtLog = [];
 
@@ -77,6 +98,7 @@ class AufgabenStore extends ChangeNotifier {
           'farbe': farbe.name,
           'themeMode': themeMode.name,
           'kalenderAktiv': kalenderAktiv,
+          'farbeVomHintergrund': farbeVomHintergrund,
           'erinnerungen': erinnerung.toJson(),
         },
         'listen': [for (final l in listen) l.toJson()],
@@ -98,6 +120,7 @@ class AufgabenStore extends ChangeNotifier {
     farbe = Pastell.values.asNameMap()[e['farbe']] ?? Pastell.salbei;
     themeMode = ThemeMode.values.asNameMap()[e['themeMode']] ?? ThemeMode.system;
     kalenderAktiv = e['kalenderAktiv'] as bool? ?? false;
+    farbeVomHintergrund = e['farbeVomHintergrund'] as bool? ?? false;
     erinnerung = ErinnerungsEinstellungen.fromJson(
       Map<String, dynamic>.from(e['erinnerungen'] as Map? ?? const {}),
     );
@@ -600,6 +623,7 @@ class AufgabenStore extends ChangeNotifier {
 
   void farbeSetzen(Pastell p) {
     farbe = p;
+    farbeVomHintergrund = false;
     _geaendert();
   }
 

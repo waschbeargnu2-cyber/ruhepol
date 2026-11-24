@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_aktionen.dart';
@@ -53,10 +54,21 @@ Future<void> main() async {
     plattform: true,
   ));
   // Alles Weitere im Hintergrund, damit der Start nicht wartet.
+  unawaited(systemFarbeLaden(store));
   unawaited(kalender.starten());
   unawaited(erinnerungen.starten());
   unawaited(updates.starten());
   WidgetDienst(store).starten();
+}
+
+/// Material You: Akzentfarbe des Hintergrundbilds abfragen (ab Android 12).
+Future<void> systemFarbeLaden(AufgabenStore store) async {
+  try {
+    final wert = await const MethodChannel('ruhepol/kalender').invokeMethod<int>('systemFarbe');
+    store.systemFarbeSetzen(wert == null ? null : Color(wert & 0xFFFFFFFF));
+  } catch (_) {
+    // Kein Android oder zu alt: Pastell-Schema bleibt.
+  }
 }
 
 class RuhepolApp extends StatefulWidget {
@@ -99,6 +111,7 @@ class _RuhepolAppState extends State<RuhepolApp> {
         widget.kalender.aktualisierenFallsAlt();
         widget.erinnerungen.starten();
         _updates.pruefen(still: true);
+        if (widget.plattform) systemFarbeLaden(widget.store);
       },
     );
     if (widget.plattform) {
@@ -131,8 +144,8 @@ class _RuhepolAppState extends State<RuhepolApp> {
                 title: 'Agenda',
                 navigatorKey: _navigator,
                 debugShowCheckedModeBanner: false,
-                theme: ruhepolTheme(store.farbe, Brightness.light),
-                darkTheme: ruhepolTheme(store.farbe, Brightness.dark),
+                theme: ruhepolTheme(store.seedFarbe, Brightness.light),
+                darkTheme: ruhepolTheme(store.seedFarbe, Brightness.dark),
                 themeMode: store.themeMode,
                 locale: const Locale('de'),
                 supportedLocales: const [Locale('de')],
