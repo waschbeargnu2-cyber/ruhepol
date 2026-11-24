@@ -5,6 +5,7 @@ import '../datum.dart';
 import '../design.dart';
 import '../erinnerungen.dart';
 import '../handy_kalender.dart';
+import '../modelle.dart';
 import '../updates.dart';
 import '../widgets/hinweis.dart';
 
@@ -33,6 +34,9 @@ class MehrSeite extends StatelessWidget {
 
         const Abschnitt('Kalender'),
         const _KalenderKarte(),
+
+        Abschnitt('Vorlagen', info: '${store.vorlagen.length}'),
+        const _VorlagenKarte(),
 
         const Abschnitt('Farbschema'),
         Wrap(
@@ -115,6 +119,65 @@ class MehrSeite extends StatelessWidget {
         const Abschnitt('App'),
         const _AppKarte(),
       ],
+    );
+  }
+}
+
+class _VorlagenKarte extends StatelessWidget {
+  const _VorlagenKarte();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final farben = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final vorlagen = store.vorlagen.toList()
+      ..sort((a, b) => a.titel.toLowerCase().compareTo(b.titel.toLowerCase()));
+
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      color: farben.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (vorlagen.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  'Noch keine Vorlagen. Speichere eine Aufgabe in ihren Details mit '
+                  '„Als Vorlage speichern“. Was du öfter einträgst, schlägt Agenda '
+                  'dir automatisch vor.',
+                  style: text.bodyMedium,
+                ),
+              ),
+            for (final v in vorlagen)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.bookmark, color: farben.primary),
+                title: Text(v.titel),
+                subtitle: Text([
+                  store.listeVon(v.listeId).name,
+                  if (v.prioritaet != Prioritaet.keine) v.prioritaet.label,
+                  if (v.dauer != null) dauerText(v.dauer!),
+                  if (v.unteraufgaben.isNotEmpty) '${v.unteraufgaben.length} Unteraufgaben',
+                  '${store.haeufigkeit(v.titel)}× genutzt',
+                ].join(' · ')),
+                trailing: IconButton(
+                  tooltip: 'Vorlage löschen',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () {
+                    final messenger = ScaffoldMessenger.of(context);
+                    store.vorlageLoeschen(v.id);
+                    zeigeHinweis(messenger, 'Vorlage „${v.titel}“ gelöscht');
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

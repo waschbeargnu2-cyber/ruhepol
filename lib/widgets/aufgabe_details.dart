@@ -4,7 +4,9 @@ import '../aufgaben_store.dart';
 import '../datum.dart';
 import '../design.dart';
 import '../modelle.dart';
+import '../seiten/notiz_seite.dart';
 import 'hinweis.dart';
+import 'verknuepfen.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Detailansicht einer Aufgabe.
@@ -120,6 +122,42 @@ class _AufgabeDetailsState extends State<AufgabeDetails> {
     a.wiederholung = vorlage?.mitAbErledigung(a.wiederholung?.abErledigung ?? false);
     if (a.wiederholung != null) a.faellig ??= heute();
     _store.geaendert();
+  }
+
+  static const _dauerOptionen = [5, 10, 15, 30, 45, 60, 90, 120, 180, 240];
+
+  Future<void> _dauerWaehlen(Aufgabe a) async {
+    final wahl = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Wie lange dauert das?'),
+        children: [
+          for (final m in _dauerOptionen)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(m),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(dauerText(m)),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (wahl == null) return;
+    a.dauer = wahl;
+    _store.geaendert();
+  }
+
+  Future<void> _notizVerknuepfen(Aufgabe a) async {
+    final schon = {for (final n in _store.notizenZu(a.id)) n.id};
+    final wahl = await waehleNotiz(context, _store, ausser: schon);
+    if (wahl == null || !mounted) return;
+    if (wahl == 'neu') {
+      final n = _store.notizAnlegen(aufgabeId: a.id, titel: a.titel);
+      await oeffneNotiz(context, n.id);
+    } else {
+      _store.verknuepfen(wahl, a.id);
+    }
   }
 
   String _erinnerungsText(Aufgabe a) {
@@ -265,6 +303,18 @@ class _AufgabeDetailsState extends State<AufgabeDetails> {
                     },
             ),
             _Zeile(
+              icon: Icons.timelapse,
+              titel: 'Dauer',
+              wert: a.dauer != null ? dauerText(a.dauer!) : 'Keine Angabe (zählt als 30 Min.)',
+              onTap: () => _dauerWaehlen(a),
+              onEntfernen: a.dauer == null
+                  ? null
+                  : () {
+                      a.dauer = null;
+                      _store.geaendert();
+                    },
+            ),
+            _Zeile(
               icon: Icons.flag,
               titel: 'Frist',
               wert: a.frist != null
@@ -380,7 +430,54 @@ class _AufgabeDetailsState extends State<AufgabeDetails> {
                 _store.geaendert();
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // Verknüpfte Notizen
+            Row(
+              children: [
+                Expanded(child: Text('Notizen', style: text.labelLarge)),
+                TextButton.icon(
+                  onPressed: () => _notizVerknuepfen(a),
+                  icon: const Icon(Icons.link, size: 18),
+                  label: const Text('Verknüpfen'),
+                ),
+              ],
+            ),
+            for (final n in _store.notizenZu(a.id))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: NotizChip(
+                  notiz: n,
+                  onTap: () => oeffneNotiz(context, n.id),
+                  onLoesen: () => _store.verknuepfungLoesen(n.id, a.id),
+                ),
+              ),
+            if (_store.notizenZu(a.id).isEmpty)
+              Text(
+                'Verknüpfe Notizen, die zu dieser Aufgabe gehören, z. B. Ideen oder '
+                'eine Packliste, die für mehrere Aufgaben gilt.',
+                style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
+              ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final ersetzt = _store.vorlageFuer(a.titel) != null;
+                  _store.vorlageSpeichern(a);
+                  zeigeHinweis(
+                    messenger,
+                    ersetzt ? 'Vorlage „${a.titel}“ aktualisiert' : 'Als Vorlage gespeichert',
+                  );
+                },
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: Text(
+                  _store.vorlageFuer(a.titel) != null ? 'Vorlage aktualisieren' : 'Als Vorlage speichern',
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
 
             Row(
               children: [

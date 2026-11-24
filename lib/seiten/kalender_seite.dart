@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../aufgaben_store.dart';
 import '../datum.dart';
 import '../handy_kalender.dart';
+import '../konfiguration.dart';
+import '../tagesplanung.dart';
 import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
@@ -13,11 +15,11 @@ import '../widgets/termin_kachel.dart';
 // Oben eine Wochenleiste, darunter der gewählte Tag mit Kalender-Terminen und
 // Aufgaben. Smart: Die App sucht freie Zeitfenster (8–20 Uhr, mindestens
 // 60 Minuten) und schlägt die wichtigste ungeplante Aufgabe dafür vor.
-// Fenster anpassen: die Konstanten _tagBeginn/_tagEnde/_mindestLuecke.
+// Fenster anpassen: tagBeginn/tagEnde in konfiguration.dart, _mindestLuecke hier.
 // ---------------------------------------------------------------------------
 
-const _tagBeginn = 8 * 60;
-const _tagEnde = 20 * 60;
+const _tagBeginn = tagBeginn;
+const _tagEnde = tagEnde;
 const _mindestLuecke = 60;
 
 class KalenderSeite extends StatefulWidget {
@@ -132,6 +134,12 @@ class _KalenderSeiteState extends State<KalenderSeite> {
           ),
           if (tageZwischen(h, _tag) != 0)
             TextButton(onPressed: () => _waehlen(h), child: const Text('Heute')),
+          if (!_tag.isBefore(h))
+            IconButton(
+              tooltip: 'Tag planen',
+              onPressed: () => zeigeTagPlanen(context, tag: _tag),
+              icon: const Icon(Icons.auto_awesome),
+            ),
         ],
       ),
       if (!kalender.verbunden) ...[
@@ -219,7 +227,7 @@ class _KalenderSeiteState extends State<KalenderSeite> {
           terminMinute(t, _tag),
           t.ende.isBefore(plusTage(_tag, 1)) ? t.ende.hour * 60 + t.ende.minute : 24 * 60,
         ),
-      for (final a in aufgabenMitZeit) (a.uhrzeit!, a.uhrzeit! + 30),
+      for (final a in aufgabenMitZeit) (a.uhrzeit!, a.uhrzeit! + (a.dauer ?? standardDauerMinuten)),
     ]..sort((a, b) => a.$1.compareTo(b.$1));
 
     var frei = _tagBeginn;

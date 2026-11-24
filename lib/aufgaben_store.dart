@@ -30,6 +30,15 @@ class AufgabenStore extends ChangeNotifier {
   /// Protokoll aller erledigten Aufgaben (für Statistik und Abzeichen).
   List<ErledigtEintrag> erledigtLog = [];
 
+  /// Notizen (mit Aufgaben verknüpfbar).
+  List<Notiz> notizen = [];
+
+  /// Gespeicherte Vorlagen.
+  List<Vorlage> vorlagen = [];
+
+  /// Wie oft welcher Titel eingetragen wurde (Schlüssel: titelSchluessel).
+  Map<String, Haeufig> haeufig = {};
+
   // Kalender des Handys
   /// Ist die Kalender-Anbindung eingeschaltet?
   bool kalenderAktiv = false;
@@ -73,6 +82,9 @@ class AufgabenStore extends ChangeNotifier {
         'listen': [for (final l in listen) l.toJson()],
         'aufgaben': [for (final a in aufgaben) a.toJson()],
         'erledigtLog': [for (final e in erledigtLog) e.toJson()],
+        'notizen': [for (final n in notizen) n.toJson()],
+        'vorlagen': [for (final v in vorlagen) v.toJson()],
+        'haeufig': [for (final h in haeufig.values) h.toJson()],
         'kalender': {
           'id': kalenderId,
           'zuLoeschen': zuLoeschendeTermine,
@@ -100,6 +112,24 @@ class AufgabenStore extends ChangeNotifier {
     ];
     termineStand = k['stand'] is String ? DateTime.tryParse(k['stand'] as String) : null;
     _datenAusJson(d);
+
+    vorlagen = [
+      for (final v in (d['vorlagen'] as List? ?? const []))
+        Vorlage.fromJson(Map<String, dynamic>.from(v as Map)),
+    ];
+    final h = d['haeufig'] as List?;
+    haeufig = {};
+    if (h != null) {
+      for (final e in h) {
+        final x = Haeufig.fromJson(Map<String, dynamic>.from(e as Map));
+        haeufig[titelSchluessel(x.titel)] = x;
+      }
+    } else {
+      // Ältere Daten: aus den vorhandenen Aufgaben zählen
+      for (final a in aufgaben) {
+        _haeufigMerken(a);
+      }
+    }
   }
 
   void _datenAusJson(Map<String, dynamic> d) {
@@ -112,6 +142,11 @@ class AufgabenStore extends ChangeNotifier {
         Aufgabe.fromJson(Map<String, dynamic>.from(a as Map)),
     ];
     if (listen.isEmpty) listen = _standardListen();
+
+    notizen = [
+      for (final n in (d['notizen'] as List? ?? const []))
+        Notiz.fromJson(Map<String, dynamic>.from(n as Map)),
+    ];
 
     final log = d['erledigtLog'] as List?;
     if (log != null) {
@@ -202,6 +237,7 @@ class AufgabenStore extends ChangeNotifier {
       'listen': [for (final l in listen) l.toJson()],
       'aufgaben': [for (final a in aufgaben) a.toJson()],
       'erledigtLog': [for (final e in erledigtLog) e.toJson()],
+      'notizen': [for (final n in notizen) n.toJson()],
     });
   }
 
@@ -248,6 +284,157 @@ class AufgabenStore extends ChangeNotifier {
   void hinzufuegen(Aufgabe a) {
     _merken();
     aufgaben.add(a);
+    _haeufigMerken(a);
+    _geaendert();
+  }
+
+  void _haeufigMerken(Aufgabe a) {
+    final k = titelSchluessel(a.titel);
+    if (k.isEmpty) return;
+    final bisher = haeufig[k];
+    haeufig[k] = Haeufig(
+      titel: a.titel.trim(),
+      listeId: a.listeId,
+      anzahl: (bisher?.anzahl ?? 0) + 1,
+      prioritaet: a.prioritaet,
+      dauer: a.dauer,
+    );
+  }
+
+  /// Wie oft wurde dieser Titel schon eingetragen?
+  int haeufigkeit(String titel) => haeufig[titelSchluessel(titel)]?.anzahl ?? 0;
+
+  // ------------------------------------------------------------ Vorlagen
+
+  Vorlage? vorlageFuer(String titel) {
+    final k = titelSchluessel(titel);
+    for (final v in vorlagen) {
+      if (titelSchluessel(v.titel) == k) return v;
+    }
+    return null;
+  }
+
+  /// Speichert eine Aufgabe als Vorlage (ersetzt eine gleichnamige).
+  Vorlage vorlageSpeichern(Aufgabe a) {
+    final neu = Vorlage.aus(a);
+    final alt = vorlageFuer(a.titel);
+    if (alt != null) vorlagen.remove(alt);
+    vorlagen.add(neu);
+    _geaendert();
+    return neu;
+  }
+
+  void vorlageLoeschen(String id) {
+    vorlagen.removeWhere((v) => v.id == id);
+    _geaendert();
+  }
+
+  /// Vorschläge für das Eingabefenster: Vorlagen und häufige Einträge
+  /// (mindestens 2×), passend zum bisher getippten [filter].
+  ({List<Vorlage> vorlagen, List<Haeufig> haeufig}) vorschlaege({String filter = '', int max = 6}) {
+    final f = titelSchluessel(filter);
+    bool passt(String titel) => f.isEmpty || titelSchluessel(titel).contains(f);
+    final v = vorlagen.where((x) => passt(x.titel)).toList()
+      ..sort((a, b) => haeufigkeit(b.titel).compareTo(haeufigkeit(a.titel)));
+    final vorlagenSchluessel = {for (final x in vorlagen) titelSchluessel(x.titel)};
+    final offen = {for (final a in aufgaben) if (!a.erledigt) titelSchluessel(a.titel)};
+    final h = haeufig.entries
+        .where((e) =>
+            e.value.anzahl >= 2 &&
+            !vorlagenSchluessel.contains(e.key) &&
+            !offen.contains(e.key) &&
+            passt(e.value.titel) &&
+            e.key != f)
+        .map((e) => e.value)
+        .toList()
+      ..sort((a, b) {
+        final c = b.anzahl.compareTo(a.anzahl);
+        return c != 0 ? c : b.zuletzt.compareTo(a.zuletzt);
+      });
+    return (vorlagen: v.take(max).toList(), haeufig: h.take(max).toList());
+  }
+
+  // ------------------------------------------------------------ Notizen
+
+  Notiz? notiz(String id) {
+    for (final n in notizen) {
+      if (n.id == id) return n;
+    }
+    return null;
+  }
+
+  Notiz notizAnlegen({String? aufgabeId, String titel = ''}) {
+    final n = Notiz(
+      titel: titel,
+      farbe: notizen.length % listenFarben.length,
+      aufgabenIds: [if (aufgabeId != null) aufgabeId],
+    );
+    notizen.add(n);
+    _geaendert();
+    return n;
+  }
+
+  /// Nach direktem Bearbeiten einer Notiz aufrufen.
+  void notizGeaendert(Notiz n) {
+    n.geaendert = DateTime.now();
+    _geaendert();
+  }
+
+  void notizLoeschen(String id) {
+    _merken();
+    notizen.removeWhere((n) => n.id == id);
+    _geaendert();
+  }
+
+  /// Leere, unverknüpfte Notizen still entfernen (z. B. beim Schließen).
+  void leereNotizEntfernen(String id) {
+    final n = notiz(id);
+    if (n != null && n.istLeer && n.aufgabenIds.isEmpty) {
+      notizen.remove(n);
+      _geaendert();
+    }
+  }
+
+  void verknuepfen(String notizId, String aufgabeId) {
+    final n = notiz(notizId);
+    if (n == null || n.aufgabenIds.contains(aufgabeId)) return;
+    n.aufgabenIds.add(aufgabeId);
+    _geaendert();
+  }
+
+  void verknuepfungLoesen(String notizId, String aufgabeId) {
+    notiz(notizId)?.aufgabenIds.remove(aufgabeId);
+    _geaendert();
+  }
+
+  List<Notiz> notizenZu(String aufgabeId) =>
+      notizen.where((n) => n.aufgabenIds.contains(aufgabeId)).toList();
+
+  List<Aufgabe> aufgabenZu(Notiz n) => [
+        for (final id in n.aufgabenIds)
+          if (aufgabe(id) case final a?) a,
+      ];
+
+  // ------------------------------------------------------------ Planen
+
+  /// Verschiebt eine Aufgabe auf einen anderen Tag (Uhrzeit bleibt).
+  void verschieben(String id, DateTime tag) {
+    final a = aufgabe(id);
+    if (a == null) return;
+    _merken();
+    a.faellig = nurDatum(tag);
+    _geaendert();
+  }
+
+  /// Übernimmt einen Tagesplan: Aufgabe-ID → Minute des Tages.
+  void tagesplanUebernehmen(DateTime tag, Map<String, int> plan) {
+    _merken();
+    for (final e in plan.entries) {
+      final a = aufgabe(e.key);
+      if (a == null) continue;
+      a.faellig = nurDatum(tag);
+      a.uhrzeit = e.value;
+    }
     _geaendert();
   }
 
@@ -287,7 +474,12 @@ class AufgabenStore extends ChangeNotifier {
         ],
         wiederholung: w,
         erinnern: a.erinnern,
+        dauer: a.dauer,
       );
+      // Verknüpfte Notizen gelten auch für die nächste Wiederholung
+      for (final n in notizen) {
+        if (n.aufgabenIds.contains(a.id)) n.aufgabenIds.add(naechste.id);
+      }
       a.wiederholung = null; // nur die neue Aufgabe wiederholt sich weiter
       aufgaben.add(naechste);
     }
@@ -300,6 +492,9 @@ class AufgabenStore extends ChangeNotifier {
     final eventId = aufgabe(id)?.kalenderEventId;
     if (eventId != null) zuLoeschendeTermine.add(eventId);
     aufgaben.removeWhere((a) => a.id == id);
+    for (final n in notizen) {
+      n.aufgabenIds.remove(id);
+    }
     _geaendert();
   }
 

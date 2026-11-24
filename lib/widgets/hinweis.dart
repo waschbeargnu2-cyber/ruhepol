@@ -2,24 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../aufgaben_store.dart';
 
-/// Kurze Meldung unten am Bildschirm, optional mit „Rückgängig“.
+/// Kurze Meldung unten am Bildschirm, optional mit „Rückgängig“
+/// oder einer eigenen Aktion ([aktion] = Beschriftung und Funktion).
 void zeigeHinweis(
   ScaffoldMessengerState messenger,
   String text, {
   AufgabenStore? rueckgaengig,
+  (String, VoidCallback)? aktion,
 }) {
+  SnackBarAction? knopf;
+  if (aktion != null) {
+    knopf = SnackBarAction(label: aktion.$1, onPressed: aktion.$2);
+  } else if (rueckgaengig != null) {
+    knopf = SnackBarAction(label: 'Rückgängig', onPressed: rueckgaengig.rueckgaengig);
+  }
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
         content: Text(text),
-        duration: const Duration(seconds: 4),
-        action: rueckgaengig == null
-            ? null
-            : SnackBarAction(
-                label: 'Rückgängig',
-                onPressed: rueckgaengig.rueckgaengig,
-              ),
+        duration: Duration(seconds: aktion != null ? 6 : 4),
+        action: knopf,
       ),
     );
 }

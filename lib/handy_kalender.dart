@@ -348,7 +348,7 @@ class KalenderDienst extends ChangeNotifier {
       final f = a.faellig!;
       final u = a.uhrzeit!;
       final start = DateTime(f.year, f.month, f.day, u ~/ 60, u % 60);
-      final ende = start.add(const Duration(minutes: standardDauerMinuten));
+      final ende = start.add(Duration(minutes: a.dauer ?? standardDauerMinuten));
       final id = await _kanal.invokeMethod<String>('eintragSpeichern', {
         'id': a.kalenderEventId,
         'kalenderId': ziel,

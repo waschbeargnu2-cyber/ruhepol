@@ -37,6 +37,13 @@ String relativ(DateTime d, {DateTime? bezug}) {
 String langesDatum(DateTime d) =>
     '${wochentage[d.weekday - 1]}, ${d.day}. ${monate[d.month - 1]}';
 
+/// „45 Min.“, „2 Std.“, „1 Std. 30 Min.“
+String dauerText(int minuten) {
+  if (minuten < 60) return '$minuten Min.';
+  final h = minuten ~/ 60, m = minuten % 60;
+  return m == 0 ? '$h Std.' : '$h Std. $m Min.';
+}
+
 String uhrzeitText(int minuten) =>
     '${(minuten ~/ 60).toString().padLeft(2, '0')}:'
     '${(minuten % 60).toString().padLeft(2, '0')}';

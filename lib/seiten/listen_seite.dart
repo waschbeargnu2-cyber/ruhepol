@@ -8,6 +8,7 @@ import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
 import '../widgets/neue_aufgabe.dart';
 import 'matrix_ansicht.dart';
+import 'notizen_ansicht.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Listen und smarte Filter.
@@ -41,7 +42,8 @@ class ListenSeite extends StatefulWidget {
 }
 
 class _ListenSeiteState extends State<ListenSeite> {
-  bool _matrix = false;
+  /// 0 = Listen, 1 = Matrix, 2 = Notizen
+  int _ansicht = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -57,27 +59,38 @@ class _ListenSeiteState extends State<ListenSeite> {
         style: text.labelLarge?.copyWith(color: farben.onSurfaceVariant),
       ),
       const SizedBox(height: 2),
-      Text(_matrix ? 'Matrix' : 'Listen', style: text.headlineMedium),
+      Text(['Listen', 'Matrix', 'Notizen'][_ansicht], style: text.headlineMedium),
       const SizedBox(height: 12),
       SizedBox(
         width: double.infinity,
-        child: SegmentedButton<bool>(
+        child: SegmentedButton<int>(
           showSelectedIcon: false,
           segments: const [
-            ButtonSegment(value: false, icon: Icon(Icons.view_list), label: Text('Listen')),
-            ButtonSegment(value: true, icon: Icon(Icons.grid_view), label: Text('Matrix')),
+            ButtonSegment(value: 0, icon: Icon(Icons.view_list), label: Text('Listen')),
+            ButtonSegment(value: 1, icon: Icon(Icons.grid_view), label: Text('Matrix')),
+            ButtonSegment(
+              value: 2,
+              icon: Icon(Icons.sticky_note_2_outlined),
+              label: Text('Notizen'),
+            ),
           ],
-          selected: {_matrix},
-          onSelectionChanged: (s) => setState(() => _matrix = s.first),
+          selected: {_ansicht},
+          onSelectionChanged: (s) => setState(() => _ansicht = s.first),
         ),
       ),
       const SizedBox(height: 16),
     ];
 
-    if (_matrix) {
+    if (_ansicht == 1) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
         children: [...kopf, const MatrixAnsicht()],
+      );
+    }
+    if (_ansicht == 2) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
+        children: [...kopf, const NotizenAnsicht()],
       );
     }
 

@@ -6,6 +6,7 @@ import '../design.dart';
 import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
+import '../tagesplanung.dart';
 import '../updates.dart';
 import '../widgets/termin_kachel.dart';
 
@@ -85,6 +86,15 @@ class HeuteSeite extends StatelessWidget {
         if (ueberfaellig.isNotEmpty) ...[
           const SizedBox(height: 10),
           _UeberfaelligKarte(aufgaben: ueberfaellig),
+        ],
+        if (ohneZeit.isNotEmpty || ueberfaellig.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+            onPressed: () => zeigeTagPlanen(context),
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Tag planen: Aufgaben auf freie Zeiten verteilen'),
+          ),
         ],
         if (ganztaegig.isNotEmpty || zeitplan.isNotEmpty)
           Abschnitt(

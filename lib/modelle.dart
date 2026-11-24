@@ -118,9 +118,13 @@ class Aufgabe {
     this.kalenderEventId,
     this.kalenderStand,
     this.erinnern = true,
+    this.dauer,
   })  : id = id ?? neueId(),
         unteraufgaben = unteraufgaben ?? [],
         erstellt = erstellt ?? DateTime.now();
+
+  /// Geschätzte Dauer in Minuten (null = keine Angabe, zählt als 30 Min.).
+  int? dauer;
 
   final String id;
   String titel;
@@ -157,7 +161,7 @@ class Aufgabe {
   bool get gehoertInKalender => faellig != null && uhrzeit != null;
 
   String get kalenderFingerabdruck =>
-      '$titel|$notiz|${faellig?.toIso8601String()}|$uhrzeit|$erledigt';
+      '$titel|$notiz|${faellig?.toIso8601String()}|$uhrzeit|$erledigt|$dauer';
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -176,6 +180,7 @@ class Aufgabe {
         'kalenderEventId': kalenderEventId,
         'kalenderStand': kalenderStand,
         'erinnern': erinnern,
+        'dauer': dauer,
       };
 
   factory Aufgabe.fromJson(Map<String, dynamic> j) => Aufgabe(
@@ -202,8 +207,184 @@ class Aufgabe {
         kalenderEventId: j['kalenderEventId'] as String?,
         kalenderStand: j['kalenderStand'] as String?,
         erinnern: j['erinnern'] as bool? ?? true,
+        dauer: (j['dauer'] as num?)?.toInt(),
       );
 }
+
+/// Eine Notiz: Text und/oder Checkliste, mit beliebig vielen Aufgaben
+/// verknüpfbar (die Verknüpfung steht in [aufgabenIds]).
+class Notiz {
+  Notiz({
+    String? id,
+    this.titel = '',
+    this.inhalt = '',
+    List<Unteraufgabe>? checkliste,
+    this.farbe = 0,
+    this.angeheftet = false,
+    List<String>? aufgabenIds,
+    DateTime? erstellt,
+    DateTime? geaendert,
+  })  : id = id ?? neueId(),
+        checkliste = checkliste ?? [],
+        aufgabenIds = aufgabenIds ?? [],
+        erstellt = erstellt ?? DateTime.now(),
+        geaendert = geaendert ?? DateTime.now();
+
+  final String id;
+  String titel;
+  String inhalt;
+  List<Unteraufgabe> checkliste;
+
+  /// Index in `listenFarben` (design.dart).
+  int farbe;
+  bool angeheftet;
+  List<String> aufgabenIds;
+  final DateTime erstellt;
+  DateTime geaendert;
+
+  bool get istLeer =>
+      titel.trim().isEmpty && inhalt.trim().isEmpty && checkliste.isEmpty;
+
+  String get anzeigeTitel {
+    if (titel.trim().isNotEmpty) return titel.trim();
+    final erste = inhalt.trim().split('\n').first.trim();
+    if (erste.isNotEmpty) return erste;
+    if (checkliste.isNotEmpty) return checkliste.first.titel;
+    return 'Leere Notiz';
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'titel': titel,
+        'inhalt': inhalt,
+        'checkliste': [for (final c in checkliste) c.toJson()],
+        'farbe': farbe,
+        'angeheftet': angeheftet,
+        'aufgabenIds': aufgabenIds,
+        'erstellt': erstellt.toIso8601String(),
+        'geaendert': geaendert.toIso8601String(),
+      };
+
+  factory Notiz.fromJson(Map<String, dynamic> j) => Notiz(
+        id: j['id'] as String?,
+        titel: j['titel'] as String? ?? '',
+        inhalt: j['inhalt'] as String? ?? '',
+        checkliste: [
+          for (final c in (j['checkliste'] as List? ?? const []))
+            Unteraufgabe.fromJson(Map<String, dynamic>.from(c as Map)),
+        ],
+        farbe: (j['farbe'] as num?)?.toInt() ?? 0,
+        angeheftet: j['angeheftet'] as bool? ?? false,
+        aufgabenIds: [for (final a in (j['aufgabenIds'] as List? ?? const [])) a as String],
+        erstellt: _datum(j['erstellt']),
+        geaendert: _datum(j['geaendert']),
+      );
+}
+
+/// Eine gespeicherte Vorlage für wiederkehrende Aufgaben (z. B. „Wocheneinkauf“).
+class Vorlage {
+  Vorlage({
+    String? id,
+    required this.titel,
+    required this.listeId,
+    this.prioritaet = Prioritaet.keine,
+    this.dauer,
+    List<String>? unteraufgaben,
+    this.notiz = '',
+    this.wiederholung,
+  })  : id = id ?? neueId(),
+        unteraufgaben = unteraufgaben ?? [];
+
+  factory Vorlage.aus(Aufgabe a) => Vorlage(
+        titel: a.titel.trim(),
+        listeId: a.listeId,
+        prioritaet: a.prioritaet,
+        dauer: a.dauer,
+        unteraufgaben: [for (final u in a.unteraufgaben) u.titel],
+        notiz: a.notiz,
+        wiederholung: a.wiederholung,
+      );
+
+  final String id;
+  String titel;
+  String listeId;
+  Prioritaet prioritaet;
+  int? dauer;
+  List<String> unteraufgaben;
+  String notiz;
+  Wiederholung? wiederholung;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'titel': titel,
+        'listeId': listeId,
+        'prioritaet': prioritaet.name,
+        'dauer': dauer,
+        'unteraufgaben': unteraufgaben,
+        'notiz': notiz,
+        'wiederholung': wiederholung?.toJson(),
+      };
+
+  factory Vorlage.fromJson(Map<String, dynamic> j) => Vorlage(
+        id: j['id'] as String?,
+        titel: j['titel'] as String? ?? '',
+        listeId: j['listeId'] as String? ?? 'privat',
+        prioritaet:
+            Prioritaet.values.asNameMap()[j['prioritaet']] ?? Prioritaet.keine,
+        dauer: (j['dauer'] as num?)?.toInt(),
+        unteraufgaben: [for (final u in (j['unteraufgaben'] as List? ?? const [])) u as String],
+        notiz: j['notiz'] as String? ?? '',
+        wiederholung: j['wiederholung'] == null
+            ? null
+            : Wiederholung.fromJson(Map<String, dynamic>.from(j['wiederholung'] as Map)),
+      );
+}
+
+/// Wie oft ein Aufgaben-Titel schon eingetragen wurde (für Vorschläge).
+class Haeufig {
+  Haeufig({
+    required this.titel,
+    required this.listeId,
+    this.anzahl = 1,
+    this.prioritaet = Prioritaet.keine,
+    this.dauer,
+    DateTime? zuletzt,
+  }) : zuletzt = zuletzt ?? DateTime.now();
+
+  final String titel;
+  final String listeId;
+  final int anzahl;
+  final Prioritaet prioritaet;
+  final int? dauer;
+  final DateTime zuletzt;
+
+  Map<String, dynamic> toJson() => {
+        'titel': titel,
+        'listeId': listeId,
+        'anzahl': anzahl,
+        'prioritaet': prioritaet.name,
+        'dauer': dauer,
+        'zuletzt': zuletzt.toIso8601String(),
+      };
+
+  factory Haeufig.fromJson(Map<String, dynamic> j) => Haeufig(
+        titel: j['titel'] as String? ?? '',
+        listeId: j['listeId'] as String? ?? 'privat',
+        anzahl: (j['anzahl'] as num?)?.toInt() ?? 1,
+        prioritaet:
+            Prioritaet.values.asNameMap()[j['prioritaet']] ?? Prioritaet.keine,
+        dauer: (j['dauer'] as num?)?.toInt(),
+        zuletzt: _datum(j['zuletzt']),
+      );
+}
+
+/// Vergleichsschlüssel für Titel: klein, ohne doppelte Leerzeichen und
+/// ohne Satzzeichen am Ende („Wocheneinkauf!“ = „wocheneinkauf“).
+String titelSchluessel(String titel) => titel
+    .trim()
+    .toLowerCase()
+    .replaceAll(RegExp(r'[.!?…]+$'), '')
+    .replaceAll(RegExp(r'\s+'), ' ');
 
 /// Ein Eintrag „Aufgabe erledigt“ für Statistik, Punkte und Abzeichen.
 class ErledigtEintrag {

@@ -179,7 +179,7 @@ void main() {
 
     await tester.tap(find.text('Listen').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(SegmentedButton<bool>, 'Matrix'));
+    await tester.tap(find.widgetWithText(SegmentedButton<int>, 'Matrix'));
     await tester.pumpAndSettle();
     expect(find.text('Sofort erledigen'), findsOneWidget);
     expect(find.text('Einplanen'), findsOneWidget);

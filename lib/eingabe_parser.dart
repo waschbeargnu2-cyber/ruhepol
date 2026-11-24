@@ -18,6 +18,9 @@ class ParseErgebnis {
   Prioritaet prioritaet = Prioritaet.keine;
   Wiederholung? wiederholung;
   DateTime? frist;
+
+  /// Dauer in Minuten („30 min“, „2 Std.“, „1,5h“).
+  int? dauer;
 }
 
 const _tage = [
@@ -73,6 +76,15 @@ ParseErgebnis analysiere(
       // „!“ = niedrig, „!!“ = mittel, „!!!“ = hoch
       _ => Prioritaet.values[v.length + 1],
     };
+  });
+
+  // Dauer: „30 min“, „45 Minuten“, „2 Std.“, „1,5h“, „Dauer 20 min“
+  nimm(r'\s(?:dauer\s+)?(\d{1,3}(?:[.,]\d)?)\s*(minuten|min|stunden|stunde|std|h)\.?(?=\s)', (m) {
+    final wert = double.tryParse(m[1]!.replaceAll(',', '.'));
+    if (wert == null) return;
+    final einheit = m[2]!.toLowerCase();
+    final minuten = einheit.startsWith('min') ? wert.round() : (wert * 60).round();
+    if (minuten > 0 && minuten <= 24 * 60) r.dauer = minuten;
   });
 
   // Wiederholungen
