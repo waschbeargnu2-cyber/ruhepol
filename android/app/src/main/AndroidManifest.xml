@@ -9,8 +9,11 @@
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
+    <!-- Updates: bei GitHub nachsehen und neue Version installieren -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
-        android:label="Ruhepol"
+        android:label="Agenda"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -34,7 +37,43 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- „Teilen → Agenda“: Text aus anderen Apps als Aufgabe -->
+            <intent-filter android:label="Als Aufgabe speichern">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!-- Kurzbefehl und Widget: neue Aufgabe -->
+            <intent-filter>
+                <action android:name="app.ruhepol.ruhepol.NEUE_AUFGABE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/kurzbefehle" />
         </activity>
+        <!-- Homescreen-Widget „Heute“ (siehe AgendaWidget.kt) -->
+        <receiver
+            android:name=".AgendaWidget"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_heute_info" />
+        </receiver>
+        <!-- Gibt die heruntergeladene Update-APK an den Installer weiter -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.dateien"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/dateipfade" />
+        </provider>
         <!-- Erinnerungen (siehe Erinnerungen.kt) -->
         <receiver
             android:name=".ErinnerungsEmpfaenger"

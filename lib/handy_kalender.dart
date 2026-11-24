@@ -10,12 +10,12 @@ import 'modelle.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Verbindung zum Kalender des Handys.
-// Ruhepol nutzt die Kalender, die auf dem Galaxy eingerichtet sind (Google,
+// Agenda nutzt die Kalender, die auf dem Galaxy eingerichtet sind (Google,
 // Samsung …). Android gleicht sie selbst mit Google ab. Dafür braucht es
 // kein Google-Konto in der App und keine Cloud.
 //   Lesen:     Termine aus allen sichtbaren Kalendern (7 Tage zurück, 60 voraus)
 //   Schreiben: Aufgaben mit Datum UND Uhrzeit kommen in den gewählten Kalender
-//              (Standard: eigener Kalender „Ruhepol“, nur auf dem Handy).
+//              (Standard: eigener Kalender „Agenda“, nur auf dem Handy).
 // Der Android-Teil steht in android/app/src/main/kotlin/.../MainActivity.kt.
 // ---------------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ class KalenderDienst extends ChangeNotifier {
 
   bool get verbunden => status == KalenderStatus.verbunden;
 
-  /// Kalender, in die Ruhepol schreiben darf.
+  /// Kalender, in die Agenda schreiben darf.
   List<KalenderInfo> get schreibbareKalender =>
       kalender.where((k) => k.schreibbar && k.sichtbar).toList();
 
@@ -109,7 +109,7 @@ class KalenderDienst extends ChangeNotifier {
         status = s == 'dauerhaftVerweigert'
             ? KalenderStatus.dauerhaftVerweigert
             : KalenderStatus.keinZugriff;
-        fehler = 'Ruhepol hat keinen Zugriff mehr auf den Kalender.';
+        fehler = 'Agenda hat keinen Zugriff mehr auf den Kalender.';
         notifyListeners();
       }
     } on MissingPluginException {
@@ -140,7 +140,7 @@ class KalenderDienst extends ChangeNotifier {
             'unter „Berechtigungen → Kalender“ erlauben.';
       } else {
         status = KalenderStatus.keinZugriff;
-        fehler = 'Ohne Kalender-Zugriff kann Ruhepol keine Termine zeigen.';
+        fehler = 'Ohne Kalender-Zugriff kann Agenda keine Termine zeigen.';
       }
     } catch (e) {
       status = KalenderStatus.keinZugriff;
@@ -167,7 +167,7 @@ class KalenderDienst extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Anderen Kalender für Aufgaben wählen (null = eigener Kalender „Ruhepol“).
+  /// Anderen Kalender für Aufgaben wählen (null = eigener Kalender „Agenda“).
   Future<void> zielSetzen(String? kalenderId) async {
     final ziel = kalender.where((k) => k.id == kalenderId).firstOrNull;
     _store.zielKalenderSetzen(ziel == null || ziel.istEigener ? null : kalenderId);
@@ -178,7 +178,7 @@ class KalenderDienst extends ChangeNotifier {
   void _plattformFehler(PlatformException e) {
     if (e.code == 'keine_berechtigung') {
       status = KalenderStatus.keinZugriff;
-      fehler = 'Ruhepol hat keinen Kalender-Zugriff mehr. Tippe auf „Kalender verbinden“.';
+      fehler = 'Agenda hat keinen Kalender-Zugriff mehr. Tippe auf „Kalender verbinden“.';
     } else {
       fehler = 'Kalender-Fehler: ${e.message ?? e.code}';
     }
@@ -288,10 +288,10 @@ class KalenderDienst extends ChangeNotifier {
       _store.zielKalenderSetzen(null);
     }
     final id = await _kanal.invokeMethod<String>('eigenerKalender', {
-      'name': ruhepolKalenderName,
+      'name': kalenderAnzeigeName,
       'farbe': ruhepolKalenderFarbe,
     });
-    if (id == null) throw StateError('Kalender „Ruhepol“ konnte nicht angelegt werden');
+    if (id == null) throw StateError('Kalender „Agenda“ konnte nicht angelegt werden');
     return id;
   }
 
@@ -354,7 +354,7 @@ class KalenderDienst extends ChangeNotifier {
         'kalenderId': ziel,
         'titel': a.erledigt ? '✓ ${a.titel}' : a.titel,
         'beschreibung':
-            a.notiz.isEmpty ? 'Aufgabe aus Ruhepol' : '${a.notiz}\n\nAufgabe aus Ruhepol',
+            a.notiz.isEmpty ? 'Aufgabe aus Agenda' : '${a.notiz}\n\nAufgabe aus Agenda',
         'start': start.millisecondsSinceEpoch,
         'ende': ende.millisecondsSinceEpoch,
       });

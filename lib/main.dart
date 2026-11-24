@@ -3,30 +3,39 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'app_aktionen.dart';
 import 'aufgaben_store.dart';
 import 'design.dart';
 import 'erinnerungen.dart';
 import 'handy_kalender.dart';
+import 'seiten/erfolge_seite.dart';
 import 'seiten/heute_seite.dart';
 import 'seiten/kalender_seite.dart';
 import 'seiten/listen_seite.dart';
 import 'seiten/mehr_seite.dart';
 import 'speicher.dart';
+import 'updates.dart';
+import 'widget_daten.dart';
 import 'widgets/neue_aufgabe.dart';
 
 // ---------------------------------------------------------------------------
-// ERKLÄRUNG: Aufbau der App
+// ERKLÄRUNG: Aufbau der App „Agenda“
 //   main.dart            Start, Farben, Navigationsleiste
 //   aufgaben_store.dart  Gedächtnis der App (alle Änderungen laufen hier durch)
-//   modelle.dart         Aufgabe, Liste, Wiederholung …
+//   modelle.dart         Aufgabe, Liste, Wiederholung, Erledigt-Protokoll …
 //   speicher.dart        Speichern auf dem Handy
 //   eingabe_parser.dart  Erkennung von „morgen 15 Uhr #Liste !!“
 //   handy_kalender.dart  Kalender des Handys lesen/schreiben (Google, Samsung …)
 //   erinnerungen.dart    Wann woran erinnert wird (Android stellt die Wecker)
+//   erfolge.dart         Punkte, Level, Serien und Abzeichen
+//   widget_daten.dart    Daten für das Homescreen-Widget
+//   updates.dart         Neue Versionen von GitHub holen
+//   app_aktionen.dart    Teilen, Kurzbefehl und Widget-„+“
 //   konfiguration.dart   Kalender-Einstellungen (Name, Farbe, Dauer)
 //   design.dart          Farben und Symbole
-//   seiten/              Heute, Listen, Kalender, Mehr
+//   seiten/              Heute, Listen (+ Matrix), Kalender, Erfolge, Mehr
 //   widgets/             Bausteine (Aufgaben-Kachel, Fenster …)
+// Android-Teile: android/app/src/main/kotlin/app/ruhepol/ruhepol/
 // ---------------------------------------------------------------------------
 
 Future<void> main() async {
@@ -35,10 +44,19 @@ Future<void> main() async {
   await store.laden();
   final kalender = KalenderDienst(store);
   final erinnerungen = ErinnerungsDienst(store);
-  runApp(RuhepolApp(store: store, kalender: kalender, erinnerungen: erinnerungen));
-  // Kalender und Erinnerungen im Hintergrund laden, damit der Start nicht wartet.
+  final updates = UpdateDienst();
+  runApp(RuhepolApp(
+    store: store,
+    kalender: kalender,
+    erinnerungen: erinnerungen,
+    updates: updates,
+    plattform: true,
+  ));
+  // Alles Weitere im Hintergrund, damit der Start nicht wartet.
   unawaited(kalender.starten());
   unawaited(erinnerungen.starten());
+  unawaited(updates.starten());
+  WidgetDienst(store).starten();
 }
 
 class RuhepolApp extends StatefulWidget {
@@ -47,11 +65,17 @@ class RuhepolApp extends StatefulWidget {
     required this.store,
     required this.kalender,
     required this.erinnerungen,
+    this.updates,
+    this.plattform = false,
   });
 
   final AufgabenStore store;
   final KalenderDienst kalender;
   final ErinnerungsDienst erinnerungen;
+  final UpdateDienst? updates;
+
+  /// true = echte App auf Android (in Tests false).
+  final bool plattform;
 
   @override
   State<RuhepolApp> createState() => _RuhepolAppState();
@@ -59,21 +83,29 @@ class RuhepolApp extends StatefulWidget {
 
 class _RuhepolAppState extends State<RuhepolApp> {
   late final AppLifecycleListener _lebenszyklus;
+  late final UpdateDienst _updates = widget.updates ?? UpdateDienst();
+  final _navigator = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
-    // Speichert sofort, wenn die App in den Hintergrund geht.
     _lebenszyklus = AppLifecycleListener(
+      // Speichert sofort, wenn die App in den Hintergrund geht.
       onHide: widget.store.sofortSpeichern,
       onPause: widget.store.sofortSpeichern,
-      // Beim Zurückkehren in die App Termine auffrischen (höchstens 1x pro Minute)
-      // und per Benachrichtigung erledigte Aufgaben übernehmen.
+      // Beim Zurückkehren: Termine auffrischen, per Benachrichtigung oder
+      // Widget erledigte Aufgaben übernehmen, nach Updates schauen.
       onResume: () {
         widget.kalender.aktualisierenFallsAlt();
         widget.erinnerungen.starten();
+        _updates.pruefen(still: true);
       },
     );
+    if (widget.plattform) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppAktionen(_navigator).starten();
+      });
+    }
   }
 
   @override
@@ -90,21 +122,25 @@ class _RuhepolAppState extends State<RuhepolApp> {
       child: KalenderScope(
         dienst: widget.kalender,
         child: ErinnerungsScope(
-        dienst: widget.erinnerungen,
-        child: ListenableBuilder(
-        listenable: store,
-        builder: (context, _) => MaterialApp(
-          title: 'Ruhepol',
-          debugShowCheckedModeBanner: false,
-          theme: ruhepolTheme(store.farbe, Brightness.light),
-          darkTheme: ruhepolTheme(store.farbe, Brightness.dark),
-          themeMode: store.themeMode,
-          locale: const Locale('de'),
-          supportedLocales: const [Locale('de')],
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          home: const Startseite(),
-        ),
-        ),
+          dienst: widget.erinnerungen,
+          child: UpdateScope(
+            dienst: _updates,
+            child: ListenableBuilder(
+              listenable: store,
+              builder: (context, _) => MaterialApp(
+                title: 'Agenda',
+                navigatorKey: _navigator,
+                debugShowCheckedModeBanner: false,
+                theme: ruhepolTheme(store.farbe, Brightness.light),
+                darkTheme: ruhepolTheme(store.farbe, Brightness.dark),
+                themeMode: store.themeMode,
+                locale: const Locale('de'),
+                supportedLocales: const [Locale('de')],
+                localizationsDelegates: GlobalMaterialLocalizations.delegates,
+                home: const Startseite(),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -125,6 +161,7 @@ class _StartseiteState extends State<Startseite> {
     HeuteSeite(),
     ListenSeite(),
     KalenderSeite(),
+    ErfolgeSeite(),
     MehrSeite(),
   ];
 
@@ -132,7 +169,7 @@ class _StartseiteState extends State<Startseite> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(child: IndexedStack(index: _tab, children: _seiten)),
-      floatingActionButton: _tab == 3
+      floatingActionButton: _tab >= 3
           ? null
           : FloatingActionButton.extended(
               onPressed: () => zeigeNeueAufgabe(context),
@@ -153,6 +190,11 @@ class _StartseiteState extends State<Startseite> {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: 'Kalender',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Erfolge',
           ),
           NavigationDestination(icon: Icon(Icons.tune), label: 'Mehr'),
         ],

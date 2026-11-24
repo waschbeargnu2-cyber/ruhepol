@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Langes Drücken auf das App-Symbol → „Neue Aufgabe“ -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_kurzbefehl_neu"
+        android:shortcutId="neue_aufgabe"
+        android:shortcutLongLabel="@string/lang_neu"
+        android:shortcutShortLabel="@string/kurz_neu">
+        <intent
+            android:action="app.ruhepol.ruhepol.NEUE_AUFGABE"
+            android:targetClass="app.ruhepol.ruhepol.MainActivity"
+            android:targetPackage="app.ruhepol.ruhepol" />
+    </shortcut>
+</shortcuts>

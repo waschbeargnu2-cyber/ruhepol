@@ -150,7 +150,7 @@ class Aufgabe {
   /// der Kalendereintrag aktualisiert.
   String? kalenderStand;
 
-  /// Soll Ruhepol an diese Aufgabe erinnern?
+  /// Soll Agenda an diese Aufgabe erinnern?
   bool erinnern;
 
   /// Nur Aufgaben mit Datum UND Uhrzeit kommen in den Kalender.
@@ -202,6 +202,62 @@ class Aufgabe {
         kalenderEventId: j['kalenderEventId'] as String?,
         kalenderStand: j['kalenderStand'] as String?,
         erinnern: j['erinnern'] as bool? ?? true,
+      );
+}
+
+/// Ein Eintrag „Aufgabe erledigt“ für Statistik, Punkte und Abzeichen.
+class ErledigtEintrag {
+  const ErledigtEintrag({
+    required this.aufgabeId,
+    required this.zeit,
+    required this.prioritaet,
+    required this.listeId,
+    required this.puenktlich,
+    required this.mitFrist,
+  });
+
+  final String aufgabeId;
+  final DateTime zeit;
+  final Prioritaet prioritaet;
+  final String listeId;
+
+  /// Vor oder am Fälligkeits- bzw. Frist-Tag erledigt.
+  final bool puenktlich;
+
+  /// Hatte die Aufgabe eine Frist?
+  final bool mitFrist;
+
+  factory ErledigtEintrag.aus(Aufgabe a, DateTime zeit) {
+    final tag = DateTime(zeit.year, zeit.month, zeit.day);
+    final zuSpaet = (a.faellig != null && tag.isAfter(a.faellig!)) ||
+        (a.frist != null && tag.isAfter(a.frist!));
+    return ErledigtEintrag(
+      aufgabeId: a.id,
+      zeit: zeit,
+      prioritaet: a.prioritaet,
+      listeId: a.listeId,
+      puenktlich: !zuSpaet,
+      mitFrist: a.frist != null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'aufgabeId': aufgabeId,
+        'zeit': zeit.toIso8601String(),
+        'prioritaet': prioritaet.name,
+        'listeId': listeId,
+        'puenktlich': puenktlich,
+        'mitFrist': mitFrist,
+      };
+
+  factory ErledigtEintrag.fromJson(Map<String, dynamic> j) => ErledigtEintrag(
+        aufgabeId: j['aufgabeId'] as String? ?? '',
+        zeit: _datum(j['zeit']) ?? DateTime.now(),
+        prioritaet:
+            Prioritaet.values.asNameMap()[j['prioritaet']] ?? Prioritaet.keine,
+        listeId: j['listeId'] as String? ?? '',
+        puenktlich: j['puenktlich'] as bool? ?? true,
+        mitFrist: j['mitFrist'] as bool? ?? false,
       );
 }
 

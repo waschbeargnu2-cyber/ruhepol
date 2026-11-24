@@ -7,6 +7,7 @@ import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
 import '../widgets/neue_aufgabe.dart';
+import 'matrix_ansicht.dart';
 
 // ---------------------------------------------------------------------------
 // ERKLÄRUNG: Listen und smarte Filter.
@@ -32,8 +33,15 @@ final smarteFilter = <SmartFilter>[
   SmartFilter('Ohne Datum', Icons.inbox_outlined, (a, h) => a.faellig == null),
 ];
 
-class ListenSeite extends StatelessWidget {
+class ListenSeite extends StatefulWidget {
   const ListenSeite({super.key});
+
+  @override
+  State<ListenSeite> createState() => _ListenSeiteState();
+}
+
+class _ListenSeiteState extends State<ListenSeite> {
+  bool _matrix = false;
 
   @override
   Widget build(BuildContext context) {
@@ -43,16 +51,40 @@ class ListenSeite extends StatelessWidget {
     final h = heute();
     final offen = store.aufgaben.where((a) => !a.erledigt).toList();
 
+    final kopf = <Widget>[
+      Text(
+        'Ordnung',
+        style: text.labelLarge?.copyWith(color: farben.onSurfaceVariant),
+      ),
+      const SizedBox(height: 2),
+      Text(_matrix ? 'Matrix' : 'Listen', style: text.headlineMedium),
+      const SizedBox(height: 12),
+      SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<bool>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: false, icon: Icon(Icons.view_list), label: Text('Listen')),
+            ButtonSegment(value: true, icon: Icon(Icons.grid_view), label: Text('Matrix')),
+          ],
+          selected: {_matrix},
+          onSelectionChanged: (s) => setState(() => _matrix = s.first),
+        ),
+      ),
+      const SizedBox(height: 16),
+    ];
+
+    if (_matrix) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
+        children: [...kopf, const MatrixAnsicht()],
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
       children: [
-        Text(
-          'Ordnung',
-          style: text.labelLarge?.copyWith(color: farben.onSurfaceVariant),
-        ),
-        const SizedBox(height: 2),
-        Text('Listen', style: text.headlineMedium),
-        const SizedBox(height: 16),
+        ...kopf,
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,

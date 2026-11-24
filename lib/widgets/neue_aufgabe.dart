@@ -16,6 +16,8 @@ Future<void> zeigeNeueAufgabe(
   BuildContext context, {
   String? listeId,
   DateTime? faellig,
+  String? vorgabe,
+  String? notiz,
 }) {
   final store = StoreScope.lesen(context);
   return showModalBottomSheet<void>(
@@ -23,7 +25,13 @@ Future<void> zeigeNeueAufgabe(
     isScrollControlled: true,
     showDragHandle: true,
     useSafeArea: true,
-    builder: (_) => NeueAufgabe(store: store, listeId: listeId, faellig: faellig),
+    builder: (_) => NeueAufgabe(
+      store: store,
+      listeId: listeId,
+      faellig: faellig,
+      vorgabe: vorgabe,
+      notiz: notiz,
+    ),
   );
 }
 
@@ -33,11 +41,19 @@ class NeueAufgabe extends StatefulWidget {
     required this.store,
     this.listeId,
     this.faellig,
+    this.vorgabe,
+    this.notiz,
   });
 
   final AufgabenStore store;
   final String? listeId;
   final DateTime? faellig;
+
+  /// Vorbelegter Text (z. B. beim Teilen aus einer anderen App).
+  final String? vorgabe;
+
+  /// Notiz, die an die neue Aufgabe angehängt wird (z. B. geteilter Text).
+  final String? notiz;
 
   @override
   State<NeueAufgabe> createState() => _NeueAufgabeState();
@@ -56,6 +72,13 @@ class _NeueAufgabeState extends State<NeueAufgabe> {
   @override
   void initState() {
     super.initState();
+    final v = widget.vorgabe;
+    if (v != null && v.isNotEmpty) {
+      _eingabe.value = TextEditingValue(
+        text: v,
+        selection: TextSelection.collapsed(offset: v.length),
+      );
+    }
     _eingabe.addListener(() => setState(() {}));
   }
 
@@ -89,6 +112,7 @@ class _NeueAufgabeState extends State<NeueAufgabe> {
       frist: r.frist,
       prioritaet: r.prioritaet,
       wiederholung: r.wiederholung,
+      notiz: widget.notiz ?? '',
     );
     store.hinzufuegen(a);
 
@@ -134,6 +158,21 @@ class _NeueAufgabeState extends State<NeueAufgabe> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Neue Aufgabe', style: text.titleLarge),
+            if (widget.notiz != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.attach_file, size: 16, color: farben.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Der geteilte Text wird als Notiz angehängt.',
+                      style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
               controller: _eingabe,

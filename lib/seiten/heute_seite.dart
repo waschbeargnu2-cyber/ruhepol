@@ -6,6 +6,7 @@ import '../design.dart';
 import '../modelle.dart';
 import '../widgets/aufgabe_kachel.dart';
 import '../widgets/hinweis.dart';
+import '../updates.dart';
 import '../widgets/termin_kachel.dart';
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,7 @@ class HeuteSeite extends StatelessWidget {
         const SizedBox(height: 2),
         Text(gruss, style: text.headlineMedium),
         const SizedBox(height: 16),
+        const _UpdateHinweis(),
         _TagesKarte(
           fortschritt: fortschritt,
           erledigt: erledigtHeute.length,
@@ -145,6 +147,45 @@ class HeuteSeite extends StatelessWidget {
             ),
         ],
       ],
+    );
+  }
+}
+
+/// Hinweis oben auf „Heute“, wenn eine neue Version bei GitHub liegt.
+class _UpdateHinweis extends StatelessWidget {
+  const _UpdateHinweis();
+
+  @override
+  Widget build(BuildContext context) {
+    final u = UpdateScope.of(context);
+    if (!u.verfuegbar) return const SizedBox.shrink();
+    final farben = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: farben.tertiaryContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.system_update, color: farben.onTertiaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Neue Version verfügbar',
+                style: text.titleSmall?.copyWith(color: farben.onTertiaryContainer),
+              ),
+            ),
+            FilledButton(
+              onPressed: u.status == UpdateStatus.laedt ? null : u.installieren,
+              child: Text(u.status == UpdateStatus.laedt ? 'Lädt …' : 'Aktualisieren'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

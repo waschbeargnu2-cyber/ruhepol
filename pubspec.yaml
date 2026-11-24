@@ -1,10 +1,10 @@
 name: ruhepol
-description: Ruhepol – To-Do-App mit Google-Kalender, Pastellfarben und Material 3.
+description: Agenda – To-Do-App mit Handy-Kalender, Erinnerungen, Pastellfarben und Material 3.
 publish_to: 'none'
 
 # Versionsnummer der App. Die Zahl hinter dem "+" setzt der Cloud-Build
 # automatisch (fortlaufende Build-Nummer), damit Updates sich installieren lassen.
-version: 0.4.0+1
+version: 0.5.0+1
 
 environment:
   sdk: ^3.5.0

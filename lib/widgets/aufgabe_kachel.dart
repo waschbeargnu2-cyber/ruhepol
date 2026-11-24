@@ -119,6 +119,8 @@ class AufgabeKachel extends StatelessWidget {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: infos,
                           ),
+                          if (aufgabe.unteraufgaben.isNotEmpty && !aufgabe.erledigt)
+                            _Unteraufgaben(aufgabe: aufgabe, store: store),
                         ],
                       ),
                     ),
@@ -168,6 +170,77 @@ class AbhakKreis extends StatelessWidget {
         child: aufgabe.erledigt
             ? Icon(Icons.check, size: 16, color: farben.surface)
             : null,
+      ),
+    );
+  }
+}
+
+/// Unteraufgaben klein unter dem Titel, direkt abhakbar.
+/// Anzahl anpassen: `_maxSichtbar`.
+class _Unteraufgaben extends StatelessWidget {
+  const _Unteraufgaben({required this.aufgabe, required this.store});
+
+  static const _maxSichtbar = 4;
+
+  final Aufgabe aufgabe;
+  final AufgabenStore store;
+
+  @override
+  Widget build(BuildContext context) {
+    final farben = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final alle = aufgabe.unteraufgaben;
+    // Offene zuerst, damit das Wichtige sichtbar bleibt
+    final sortiert = [...alle.where((u) => !u.erledigt), ...alle.where((u) => u.erledigt)];
+    final sichtbar = sortiert.take(_maxSichtbar).toList();
+    final rest = alle.length - sichtbar.length;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final u in sichtbar)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                u.erledigt = !u.erledigt;
+                store.geaendert();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Icon(
+                      u.erledigt ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: 16,
+                      color: u.erledigt ? farben.primary : farben.outline,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        u.titel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodySmall?.copyWith(
+                          color: u.erledigt ? farben.onSurfaceVariant : farben.onSurface,
+                          decoration: u.erledigt ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (rest > 0)
+            Padding(
+              padding: const EdgeInsets.only(left: 22, top: 2),
+              child: Text(
+                '+ $rest weitere',
+                style: text.labelSmall?.copyWith(color: farben.onSurfaceVariant),
+              ),
+            ),
+        ],
       ),
     );
   }

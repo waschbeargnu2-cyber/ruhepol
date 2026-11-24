@@ -44,7 +44,7 @@ object ErinnerungsPlaner {
             val o = JSONObject()
             o.put("id", (e["id"] as Number).toInt())
             o.put("zeit", (e["zeit"] as Number).toLong())
-            o.put("titel", (e["titel"] as? String) ?: "Ruhepol")
+            o.put("titel", (e["titel"] as? String) ?: "Agenda")
             o.put("text", (e["text"] as? String) ?: "")
             o.put("aufgabeId", (e["aufgabeId"] as? String) ?: "")
             json.put(o)
@@ -65,7 +65,7 @@ object ErinnerungsPlaner {
                 c,
                 o.getInt("id"),
                 zeit,
-                o.optString("titel", "Ruhepol"),
+                o.optString("titel", "Agenda"),
                 o.optString("text", ""),
                 o.optString("aufgabeId", "")
             )
@@ -231,7 +231,7 @@ object ErinnerungsPlaner {
 class ErinnerungsEmpfaenger : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
         val id = intent.getIntExtra("id", 0)
-        val titel = intent.getStringExtra("titel") ?: "Ruhepol"
+        val titel = intent.getStringExtra("titel") ?: "Agenda"
         val text = intent.getStringExtra("text") ?: ""
         val aufgabeId = intent.getStringExtra("aufgabeId") ?: ""
         when (intent.action) {

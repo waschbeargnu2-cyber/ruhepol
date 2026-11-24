@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_beschreibung">Deine Aufgaben und der nächste Termin für heute</string>
+    <string name="widget_name">Agenda · Heute</string>
+    <string name="kurz_neu">Neue Aufgabe</string>
+    <string name="lang_neu">Neue Aufgabe anlegen</string>
+</resources>

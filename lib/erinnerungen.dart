@@ -193,7 +193,7 @@ class ErinnerungsDienst extends ChangeNotifier {
         status = s == 'dauerhaftVerweigert'
             ? ErinnerungsStatus.dauerhaftVerweigert
             : ErinnerungsStatus.keineBerechtigung;
-        fehler = 'Ruhepol darf gerade keine Benachrichtigungen zeigen.';
+        fehler = 'Agenda darf gerade keine Benachrichtigungen zeigen.';
       }
     } on MissingPluginException {
       // Kein Android (z. B. in Tests).
@@ -217,11 +217,11 @@ class ErinnerungsDienst extends ChangeNotifier {
         await planen();
       } else if (s == 'dauerhaftVerweigert') {
         status = ErinnerungsStatus.dauerhaftVerweigert;
-        fehler = 'Benachrichtigungen sind für Ruhepol aus. Du kannst sie in den '
+        fehler = 'Benachrichtigungen sind für Agenda aus. Du kannst sie in den '
             'App-Einstellungen unter „Benachrichtigungen“ erlauben.';
       } else {
         status = ErinnerungsStatus.keineBerechtigung;
-        fehler = 'Ohne Benachrichtigungen kann Ruhepol nicht erinnern.';
+        fehler = 'Ohne Benachrichtigungen kann Agenda nicht erinnern.';
       }
     } catch (e) {
       status = ErinnerungsStatus.keineBerechtigung;

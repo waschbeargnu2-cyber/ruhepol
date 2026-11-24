@@ -7,11 +7,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.CalendarContract
 import android.provider.CalendarContract.Calendars
 import android.provider.CalendarContract.Events
 import android.provider.CalendarContract.Instances
 import android.provider.Settings
+import androidx.core.content.pm.PackageInfoCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -32,15 +34,63 @@ class MainActivity : FlutterActivity() {
         private const val ANFRAGE_CODE = 4711
         private const val ANFRAGE_BENACHRICHTIGUNG = 4712
         private const val KONTO = "Ruhepol"
+        const val AKTION_NEU = "app.ruhepol.ruhepol.NEUE_AUFGABE"
     }
 
     private var offeneAnfrage: MethodChannel.Result? = null
     private var offeneBenachrichtigungsAnfrage: MethodChannel.Result? = null
+    private var kanal: MethodChannel? = null
+
+    /** Aktion, mit der die App geöffnet wurde (Teilen, Kurzbefehl, Widget). */
+    private var wartendeAktion: Map<String, Any?>? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        wartendeAktion = aktionAus(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val aktion = aktionAus(intent) ?: return
+        val k = kanal
+        if (k != null) k.invokeMethod("aktion", aktion) else wartendeAktion = aktion
+    }
+
+    private fun aktionAus(intent: Intent?): Map<String, Any?>? {
+        if (intent == null) return null
+        return when (intent.action) {
+            Intent.ACTION_SEND ->
+                if (intent.type?.startsWith("text/") == true) {
+                    mapOf(
+                        "aktion" to "teilen",
+                        "text" to (intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""),
+                        "betreff" to intent.getStringExtra(Intent.EXTRA_SUBJECT)
+                    )
+                } else {
+                    null
+                }
+            AKTION_NEU -> mapOf("aktion" to "neu")
+            else -> null
+        }
+    }
+
+    private fun imHintergrund(result: MethodChannel.Result, arbeit: () -> Any?) {
+        Thread {
+            try {
+                val wert = arbeit()
+                runOnUiThread { result.success(wert) }
+            } catch (e: Exception) {
+                runOnUiThread { result.error("netz", e.message ?: e.toString(), null) }
+            }
+        }.start()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, KANAL)
-            .setMethodCallHandler { call, result ->
+        val k = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, KANAL)
+        kanal = k
+        k.setMethodCallHandler { call, result ->
                 try {
                     behandeln(call, result)
                 } catch (e: SecurityException) {
@@ -94,13 +144,55 @@ class MainActivity : FlutterActivity() {
                     this,
                     99999,
                     System.currentTimeMillis() + 10_000L,
-                    "Ruhepol",
+                    "Agenda",
                     "So sehen deine Erinnerungen aus.",
                     ""
                 )
                 result.success(null)
             }
             "erledigteAbholen" -> result.success(ErinnerungsPlaner.erledigteAbholen(this))
+
+            // App-Start-Aktion (Teilen, Kurzbefehl, Widget)
+            "startAktion" -> {
+                result.success(wartendeAktion)
+                wartendeAktion = null
+            }
+
+            // Widget
+            "widgetAktualisieren" -> {
+                WidgetDaten.speichern(this, call.argument<String>("json") ?: "{}")
+                result.success(null)
+            }
+
+            // Updates
+            "appVersion" -> {
+                val info = packageManager.getPackageInfo(packageName, 0)
+                result.success(
+                    mapOf(
+                        "name" to info.versionName,
+                        "build" to PackageInfoCompat.getLongVersionCode(info).toInt()
+                    )
+                )
+            }
+            "updatePruefen" -> imHintergrund(result) { Aktualisierung.pruefen() }
+            "updateInstallieren" -> {
+                if (!packageManager.canRequestPackageInstalls()) {
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:$packageName")
+                        )
+                    )
+                    result.success("erlaubnis")
+                } else {
+                    val url = call.argument<String>("url")!!
+                    imHintergrund(result) {
+                        val datei = Aktualisierung.herunterladen(this, url)
+                        runOnUiThread { Aktualisierung.installieren(this, datei) }
+                        "gestartet"
+                    }
+                }
+            }
             else -> result.notImplemented()
         }
     }
@@ -264,8 +356,12 @@ class MainActivity : FlutterActivity() {
 
     // ------------------------------------------------------------ Schreiben
 
-    /** Sucht den eigenen Kalender „Ruhepol“ (nur auf dem Handy) oder legt ihn an. */
+    /**
+     * Sucht den eigenen Kalender (nur auf dem Handy) oder legt ihn an.
+     * Das interne Konto heißt weiter „Ruhepol“, angezeigt wird [name].
+     */
     private fun eigenerKalender(name: String, farbe: Int): String {
+        var vorhanden: Long? = null
         contentResolver.query(
             Calendars.CONTENT_URI,
             arrayOf(Calendars._ID),
@@ -273,7 +369,25 @@ class MainActivity : FlutterActivity() {
             arrayOf(CalendarContract.ACCOUNT_TYPE_LOCAL, KONTO),
             null
         )?.use { c ->
-            if (c.moveToFirst()) return c.getLong(0).toString()
+            if (c.moveToFirst()) vorhanden = c.getLong(0)
+        }
+        vorhanden?.let { id ->
+            // Anzeigenamen nachziehen (z. B. nach der Umbenennung in „Agenda“)
+            val aendern = ContentUris.withAppendedId(Calendars.CONTENT_URI, id).buildUpon()
+                .appendQueryParameter(CalendarContract.CALLER_IS_SYNCADAPTER, "true")
+                .appendQueryParameter(Calendars.ACCOUNT_NAME, KONTO)
+                .appendQueryParameter(Calendars.ACCOUNT_TYPE, CalendarContract.ACCOUNT_TYPE_LOCAL)
+                .build()
+            val werte = ContentValues().apply {
+                put(Calendars.CALENDAR_DISPLAY_NAME, name)
+                put(Calendars.NAME, name)
+            }
+            try {
+                contentResolver.update(aendern, werte, null, null)
+            } catch (e: Exception) {
+                // Umbenennen ist nicht wichtig genug, um abzubrechen.
+            }
+            return id.toString()
         }
 
         val uri = Calendars.CONTENT_URI.buildUpon()

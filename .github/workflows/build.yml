@@ -67,15 +67,17 @@ jobs:
         run: flutter build apk --release --target-platform android-arm64 --build-number=${{ github.run_number }}
 
       - name: APK benennen
-        run: cp build/app/outputs/flutter-apk/app-release.apk "ruhepol-build-${{ github.run_number }}.apk"
+        run: cp build/app/outputs/flutter-apk/app-release.apk "agenda-build-${{ github.run_number }}.apk"
 
+      # Die App fragt dieses Release ab (Mehr → App → Nach Updates suchen).
+      # Der Commit-Text erscheint dort als „Neu:“.
       - name: Release mit APK veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Ruhepol Build ${{ github.run_number }}
+          name: Agenda Build ${{ github.run_number }}
           body: ${{ github.event.head_commit.message }}
-          files: ruhepol-build-${{ github.run_number }}.apk
+          files: agenda-build-${{ github.run_number }}.apk
 
       - name: Erzeugte Android-Dateien ins Repository übernehmen
         if: steps.bootstrap.outputs.created == 'true'

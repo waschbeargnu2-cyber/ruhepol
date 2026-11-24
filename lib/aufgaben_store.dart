@@ -27,12 +27,15 @@ class AufgabenStore extends ChangeNotifier {
 
   ErinnerungsEinstellungen erinnerung = ErinnerungsEinstellungen();
 
+  /// Protokoll aller erledigten Aufgaben (für Statistik und Abzeichen).
+  List<ErledigtEintrag> erledigtLog = [];
+
   // Kalender des Handys
   /// Ist die Kalender-Anbindung eingeschaltet?
   bool kalenderAktiv = false;
 
   /// Kalender, in den Aufgaben eingetragen werden (ID auf dem Handy).
-  /// null = eigener Kalender „Ruhepol“.
+  /// null = eigener Kalender „Agenda“.
   String? kalenderId;
 
   /// Kalendereinträge gelöschter Aufgaben, die noch zu entfernen sind.
@@ -69,6 +72,7 @@ class AufgabenStore extends ChangeNotifier {
         },
         'listen': [for (final l in listen) l.toJson()],
         'aufgaben': [for (final a in aufgaben) a.toJson()],
+        'erledigtLog': [for (final e in erledigtLog) e.toJson()],
         'kalender': {
           'id': kalenderId,
           'zuLoeschen': zuLoeschendeTermine,
@@ -108,6 +112,19 @@ class AufgabenStore extends ChangeNotifier {
         Aufgabe.fromJson(Map<String, dynamic>.from(a as Map)),
     ];
     if (listen.isEmpty) listen = _standardListen();
+
+    final log = d['erledigtLog'] as List?;
+    if (log != null) {
+      erledigtLog = [
+        for (final e in log) ErledigtEintrag.fromJson(Map<String, dynamic>.from(e as Map)),
+      ];
+    } else {
+      // Ältere Daten ohne Protokoll: aus den erledigten Aufgaben übernehmen
+      erledigtLog = [
+        for (final a in aufgaben)
+          if (a.erledigt && a.erledigtAm != null) ErledigtEintrag.aus(a, a.erledigtAm!),
+      ]..sort((a, b) => a.zeit.compareTo(b.zeit));
+    }
   }
 
   void _geaendert() {
@@ -184,6 +201,7 @@ class AufgabenStore extends ChangeNotifier {
     _rueckgaengigStand = jsonEncode({
       'listen': [for (final l in listen) l.toJson()],
       'aufgaben': [for (final a in aufgaben) a.toJson()],
+      'erledigtLog': [for (final e in erledigtLog) e.toJson()],
     });
   }
 
@@ -243,6 +261,12 @@ class AufgabenStore extends ChangeNotifier {
     _merken();
     a.erledigt = !a.erledigt;
     a.erledigtAm = a.erledigt ? DateTime.now() : null;
+    if (a.erledigt) {
+      erledigtLog.add(ErledigtEintrag.aus(a, a.erledigtAm!));
+    } else {
+      final i = erledigtLog.lastIndexWhere((e) => e.aufgabeId == a.id);
+      if (i >= 0) erledigtLog.removeAt(i);
+    }
 
     Aufgabe? naechste;
     final w = a.wiederholung;
@@ -276,6 +300,24 @@ class AufgabenStore extends ChangeNotifier {
     final eventId = aufgabe(id)?.kalenderEventId;
     if (eventId != null) zuLoeschendeTermine.add(eventId);
     aufgaben.removeWhere((a) => a.id == id);
+    _geaendert();
+  }
+
+  /// Eisenhower-Matrix: Aufgabe in ein anderes Feld ziehen.
+  /// Wichtig → Priorität mindestens „Mittel“, unwichtig → höchstens „Niedrig“.
+  /// Dringend → fällig heute, nicht dringend → Datum entfernen.
+  void matrixVerschieben(String id, {required bool wichtig, required bool dringend}) {
+    final a = aufgabe(id);
+    if (a == null) return;
+    _merken();
+    final h = heute();
+    if (wichtig && !istWichtig(a)) a.prioritaet = Prioritaet.mittel;
+    if (!wichtig && istWichtig(a)) a.prioritaet = Prioritaet.niedrig;
+    if (dringend && !istDringend(a, h)) a.faellig = h;
+    if (!dringend && a.faellig != null && !a.faellig!.isAfter(plusTage(h, 1))) {
+      a.faellig = null;
+      a.uhrzeit = null;
+    }
     _geaendert();
   }
 
@@ -378,6 +420,14 @@ class AufgabenStore extends ChangeNotifier {
     _geaendert();
   }
 }
+
+/// Eisenhower: wichtig = Priorität „Mittel“ oder „Hoch“.
+bool istWichtig(Aufgabe a) => a.prioritaet.index >= Prioritaet.mittel.index;
+
+/// Eisenhower: dringend = fällig bis morgen oder Frist in höchstens 2 Tagen.
+bool istDringend(Aufgabe a, DateTime heute) =>
+    (a.faellig != null && !a.faellig!.isAfter(plusTage(heute, 1))) ||
+    (a.frist != null && !a.frist!.isAfter(plusTage(heute, 2)));
 
 /// Macht den Store für alle Seiten erreichbar: `StoreScope.of(context)`.
 class StoreScope extends InheritedNotifier<AufgabenStore> {

@@ -475,7 +475,7 @@ class _VerbindenHinweis extends StatelessWidget {
           Expanded(
             child: Text(
               dauerhaft
-                  ? 'Erlaube Ruhepol in den App-Einstellungen den Kalender-Zugriff.'
+                  ? 'Erlaube Agenda in den App-Einstellungen den Kalender-Zugriff.'
                   : 'Verbinde den Kalender deines Handys, um hier deine Termine zu sehen.',
               style: text.bodyMedium?.copyWith(color: farben.onSecondaryContainer),
             ),

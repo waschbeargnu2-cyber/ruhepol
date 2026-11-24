@@ -5,6 +5,7 @@ import '../datum.dart';
 import '../design.dart';
 import '../erinnerungen.dart';
 import '../handy_kalender.dart';
+import '../updates.dart';
 import '../widgets/hinweis.dart';
 
 class MehrSeite extends StatelessWidget {
@@ -103,7 +104,7 @@ class MehrSeite extends StatelessWidget {
                 Text(
                   'Tipp: Schalte unter Einstellungen → Konten und Sicherung → '
                   'Google Drive die Sicherung ein. Dann sichert Android '
-                  'Ruhepol automatisch mit.',
+                  'Agenda automatisch mit.',
                   style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
                 ),
               ],
@@ -111,14 +112,89 @@ class MehrSeite extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 8),
-        const ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.info_outline),
-          title: Text('Version'),
-          subtitle: Text('0.4'),
-        ),
+        const Abschnitt('App'),
+        const _AppKarte(),
       ],
+    );
+  }
+}
+
+class _AppKarte extends StatelessWidget {
+  const _AppKarte();
+
+  @override
+  Widget build(BuildContext context) {
+    final u = UpdateScope.of(context);
+    final farben = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final neu = u.neu;
+
+    final status = switch (u.status) {
+      UpdateStatus.pruefe => 'Suche nach Updates …',
+      UpdateStatus.laedt => 'Lade neue Version …',
+      UpdateStatus.aktuell => 'Du hast die neueste Version.',
+      UpdateStatus.verfuegbar when neu != null =>
+        'Neue Version verfügbar: Build ${neu.build} (${neu.groesseText})',
+      UpdateStatus.fehler => 'Update-Suche fehlgeschlagen.',
+      _ => 'Updates kommen direkt von GitHub.',
+    };
+
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      color: farben.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: farben.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Agenda ${u.versionText}', style: text.titleSmall),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(status, style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant)),
+            if (u.verfuegbar && neu != null && neu.notiz.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Neu:', style: text.labelLarge),
+              Text(neu.notiz, style: text.bodySmall),
+            ],
+            if (u.fehler != null) ...[
+              const SizedBox(height: 8),
+              Text(u.fehler!, style: text.bodySmall?.copyWith(color: farben.error)),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (u.verfuegbar)
+                  FilledButton.icon(
+                    onPressed: u.status == UpdateStatus.laedt ? null : u.installieren,
+                    icon: u.status == UpdateStatus.laedt
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.system_update),
+                    label: const Text('Aktualisieren'),
+                  ),
+                FilledButton.tonalIcon(
+                  onPressed: u.status == UpdateStatus.pruefe ? null : () => u.pruefen(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Nach Updates suchen'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -247,7 +323,7 @@ class _ErinnerungsKarte extends StatelessWidget {
             ),
           ),
         Text(
-          'Tipp: Kommen Erinnerungen zu spät, nimm Ruhepol unter Einstellungen → '
+          'Tipp: Kommen Erinnerungen zu spät, nimm Agenda unter Einstellungen → '
           'Akku → Hintergrundnutzungslimits aus den „schlafenden Apps“ heraus.',
           style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
         ),
@@ -276,7 +352,7 @@ class _ErinnerungsKarte extends StatelessWidget {
       final dauerhaft = dienst.status == ErinnerungsStatus.dauerhaftVerweigert;
       inhalt.addAll([
         Text(
-          'Ruhepol erinnert dich zur Uhrzeit einer Aufgabe, vor Fristen und auf '
+          'Agenda erinnert dich zur Uhrzeit einer Aufgabe, vor Fristen und auf '
           'Wunsch jeden Morgen mit einer Tagesübersicht. In der Benachrichtigung '
           'kannst du Aufgaben direkt abhaken oder um eine Stunde verschieben.',
           style: text.bodyMedium,
@@ -353,14 +429,14 @@ class _KalenderKarte extends StatelessWidget {
           leading: const Icon(Icons.edit_calendar),
           title: const Text('Aufgaben eintragen in'),
           subtitle: Text(
-            ziel == null ? 'Ruhepol (nur auf diesem Handy)' : '${ziel.name} · ${ziel.herkunft}',
+            ziel == null ? 'Agenda (nur auf diesem Handy)' : '${ziel.name} · ${ziel.herkunft}',
           ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _zielWaehlen(context, dienst),
         ),
         Text(
           'Nur Aufgaben mit Datum und Uhrzeit werden eingetragen. Deine anderen '
-          'Termine liest Ruhepol nur.',
+          'Termine liest Agenda nur.',
           style: text.bodySmall?.copyWith(color: farben.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
@@ -385,7 +461,7 @@ class _KalenderKarte extends StatelessWidget {
       inhalt.addAll([
         Text(
           'Verbinde den Kalender deines Handys: Termine aus Google- und '
-          'Samsung-Kalender erscheinen dann in Ruhepol, und Aufgaben mit Uhrzeit '
+          'Samsung-Kalender erscheinen dann in Agenda, und Aufgaben mit Uhrzeit '
           'werden dort eingetragen. Dafür braucht es kein Google-Konto in der App.',
           style: text.bodyMedium,
         ),
@@ -453,7 +529,7 @@ class _KalenderKarte extends StatelessWidget {
                   backgroundColor:
                       k.farbe != null ? Color((k.farbe! & 0xFFFFFF) | 0xFF000000) : null,
                 ),
-                title: Text(k.istEigener ? 'Ruhepol' : k.name),
+                title: Text(k.istEigener ? 'Agenda' : k.name),
                 subtitle: Text(k.herkunft),
                 trailing: k.id == aktuell ? const Icon(Icons.check) : null,
                 onTap: () => Navigator.of(context).pop(k.id),
