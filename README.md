@@ -25,6 +25,9 @@ Gebaut mit Flutter (Dart) und kleinen Android-Teilen in Kotlin. Die App wird in 
 | `lib/handy_kalender.dart` | Kalender des Handys lesen und schreiben |
 | `lib/erinnerungen.dart` | Regeln, wann woran erinnert wird |
 | `lib/erfolge.dart` | Punkte, Level, Serien, Abzeichen |
+| `lib/tagesplanung.dart` | „Tag planen“: Aufgaben auf freie Zeiten verteilen |
+| `lib/seiten/notizen_ansicht.dart`, `notiz_seite.dart` | Notizen und ihr Editor |
+| `lib/widgets/verknuepfen.dart` | Notizen mit Aufgaben verknüpfen |
 | `lib/widget_daten.dart` | Daten für das Homescreen-Widget |
 | `lib/updates.dart` | Updates von GitHub |
 | `lib/app_aktionen.dart` | Teilen, Kurzbefehl „Neue Aufgabe“, Widget-„+“ |
@@ -43,7 +46,8 @@ Gebaut mit Flutter (Dart) und kleinen Android-Teilen in Kotlin. Die App wird in 
 - **Erinnerungsregeln:** `lib/erinnerungen.dart` → `planeErinnerungen`
 - **Punkte, Level, Abzeichen:** `lib/erfolge.dart`
 - **Matrix-Regeln (wichtig/dringend):** `lib/aufgaben_store.dart` → `istWichtig`, `istDringend`
-- **Freie Zeitfenster (8–20 Uhr, min. 60 Min.):** `lib/seiten/kalender_seite.dart`
+- **Tagesfenster (8–20 Uhr), Puffer, Standarddauer:** `lib/konfiguration.dart`
+- **Ab wann „Als Vorlage speichern?“ angeboten wird (3×):** `lib/widgets/neue_aufgabe.dart`
 - **App-Symbol:** `android/app/src/main/res/drawable/ic_launcher_*.xml`
 
 ## Hinweise
