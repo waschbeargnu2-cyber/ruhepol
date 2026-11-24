@@ -1,0 +1,22 @@
+name: ruhepol
+description: Ruhepol – To-Do-App mit Google-Kalender, Pastellfarben und Material 3.
+publish_to: 'none'
+
+# Versionsnummer der App. Die Zahl hinter dem "+" setzt der Cloud-Build
+# automatisch (fortlaufende Build-Nummer), damit Updates sich installieren lassen.
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
